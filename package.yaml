@@ -1,0 +1,57 @@
+name:                sonny76
+version:             0.1.0.0
+github:              "githubuser/sonny76"
+license:             BSD3
+author:              "Author name here"
+maintainer:          "example@example.com"
+copyright:           "2021 Author name here"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/githubuser/sonny76#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- miso
+- jsaddle
+- jsaddle-warp
+- transformers
+- warp
+- websockets
+
+executables:
+  sonny76-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    # For details on warnings: https://downloads.haskell.org/~ghc/master/users-guide/using-warnings.html
+    # This list taken from https://medium.com/mercury-bank/enable-all-the-warnings-a0517bc081c3
+    # Enable all warnings with -Weverything, then disable the ones we don’t care about
+    - -Weverything
+    - -Wno-missing-exported-signatures # missing-exported-signatures turns off the more strict -Wmissing-signatures
+    - -Wno-missing-import-lists # Requires explicit imports of _every_ function (e.g. ‘$’); too strict
+    - -Wno-missed-specialisations # When GHC can’t specialize a polymorphic function
+    - -Wno-all-missed-specialisations # See missed-specialisations
+    - -Wno-unsafe # Don’t use Safe Haskell warnings
+    - -Wno-safe # Don’t use Safe Haskell warnings
+    - -Wno-missing-local-signatures # Warning for polymorphic local bindings; nothing wrong with those.
+    - -Wno-monomorphism-restriction # Don’t warn if the monomorphism restriction is used
+    - -Wno-prepositive-qualified-module
+    - -Wno-missing-safe-haskell-mode
+    - -Wno-implicit-prelude
+    - -Wno-unused-top-binds
+    - -Wno-missing-deriving-strategies
+    dependencies:
+    - sonny76
