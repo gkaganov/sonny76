@@ -19,6 +19,8 @@ import Network.WebSockets
 -- IO Monad
 import Control.Monad.IO.Class
 
+import Data.Tiled.Types
+
 gridSize :: Integer
 gridSize = 5
 
@@ -58,13 +60,13 @@ newtype Grid =
   deriving (Eq)
 
 data Ability
-  = Move
+  = Shatter
   | Fireball
   deriving (Eq)
 
-cast :: Ability -> Grid -> Tile -> Tile -> Grid
-cast Fireball grid _ _ = grid
-cast Move grid _ _ = grid
+use :: Ability -> Grid -> Tile -> Tile -> Grid
+use Fireball grid _ _ = grid
+use Shatter grid _ _ = grid
 
 -- | Type synonym for an application model
 data Model =
@@ -100,7 +102,7 @@ initialModel =
   let playerWithPos =
         (Hero {name = "hans", ability1 = Fireball}, Pos {x = 0, y = 0})
       enemyWithPos =
-        (Hero {name = "knight", ability1 = Move}, Pos {x = 4, y = 4})
+        (Hero {name = "knight", ability1 = Shatter}, Pos {x = 4, y = 4})
       pos = snd playerWithPos
    in Model
         { grid =
