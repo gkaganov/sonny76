@@ -1,0 +1,68 @@
+.grid {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+
+.enemy {
+  transform: scaleX(-1);
+  height: 117px;
+  width: 156px;
+  filter: invert(50%);
+  animation: attack 1s steps(5) 1,
+    cast 1s steps(4) 1s 1,
+    idle 1s steps(3) 2s infinite;
+}
+
+.player {
+  height: 117px;
+  width: 156px;
+  animation: attack 1s steps(5) 1,
+    cast 1s steps(4) 1s 1,
+    idle 1s steps(3) 2s infinite;
+}
+
+@keyframes attack {
+  from {
+    background: url("attack.png");
+    background-position: 0px;
+  }
+
+  to {
+    background: url("attack.png");
+    background-position: 780px;
+  }
+}
+
+@keyframes cast {
+  from {
+    background: url("cast.png");
+    background-position: 0px;
+  }
+
+  to {
+    background: url("cast.png");
+    background-position: 624px;
+  }
+}
+
+@keyframes idle {
+  from {
+    background: url("idle.png");
+    background-position: 0px;
+  }
+
+  to {
+    background: url("idle.png");
+    background-position: 468px;
+  }
+}

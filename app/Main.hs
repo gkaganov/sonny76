@@ -7,19 +7,19 @@ module Main
   ( main
   ) where
 
--- Miso framework import
+-- miso framework import
 import Miso
 import Miso.String
--- JSAddle import depending on the compiler
+-- jsaddle import depending on the compiler
 #ifndef __GHCJS__
 import Language.Javascript.JSaddle.Warp as JSaddle
+import qualified Network.Wai as Wai
+import Network.Wai.Application.Static
 import qualified Network.Wai.Handler.Warp as Warp
 import Network.WebSockets
 #endif
 -- IO Monad
 import Control.Monad.IO.Class
-
-import Data.Tiled.Types
 
 gridSize :: Integer
 gridSize = 5
@@ -64,9 +64,9 @@ data Ability
   | Fireball
   deriving (Eq)
 
-use :: Ability -> Grid -> Tile -> Tile -> Grid
-use Fireball grid _ _ = grid
-use Shatter grid _ _ = grid
+cast :: Ability -> Grid -> Tile -> Tile -> Grid
+cast Fireball grid _ _ = grid
+cast Shatter grid _ _ = grid
 
 -- | Type synonym for an application model
 data Model =
@@ -90,7 +90,12 @@ runApp :: JSM () -> IO ()
 runApp f =
   Warp.runSettings
     (Warp.setPort 8080 (Warp.setTimeout 3600 Warp.defaultSettings)) =<<
-  JSaddle.jsaddleOr defaultConnectionOptions (f >> syncPoint) JSaddle.jsaddleApp
+  JSaddle.jsaddleOr defaultConnectionOptions (f >> syncPoint) app
+  where
+    app req sendResp =
+      case Wai.pathInfo req of
+        ("assets":_) -> staticApp (defaultWebAppSettings ".") req sendResp
+        _ -> JSaddle.jsaddleApp req sendResp
 #else
 -- | ghcjs runApp
 runApp :: IO () -> IO ()
@@ -138,9 +143,21 @@ updateModel SayHelloWorld m =
 -- | Constructs a virtual DOM from a model
 viewModel :: Model -> View Action
 viewModel x =
-  div_
+  body_
     []
-    [ button_ [onClick AddOne] [text "=> =>"]
-    , text (ms $ name $ enemy x)
-    , button_ [onClick SubtractOne] [text "-"]
+    [ link_ [rel_ "stylesheet", href_ "assets/style.css"]
+    , link_ [rel_ "icon", href_ "assets/favicon.ico"]
+    , div_
+        [class_ "grid"]
+        [ div_
+            [class_ "hero-box"]
+            [ div_ [class_ "player"] []
+            , div_ [class_ "hero-name"] [text (ms $ name $ player x)]
+            ]
+        , div_
+            [class_ "hero-box"]
+            [ div_ [class_ "enemy"] []
+            , div_ [class_ "hero-name"] [text (ms $ name $ enemy x)]
+            ]
+        ]
     ]
