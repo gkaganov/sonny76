@@ -1,5 +1,15 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: url("scifi-background.gif");
+  background-size: cover;
+  height: 95vh;
+}
+
 .grid {
   display: flex;
+  gap: 10rem;
   flex-direction: row;
   align-items: center;
   justify-content: center;
@@ -12,23 +22,26 @@
   justify-content: center;
 }
 
+.text {
+  color: white;
+}
+
+.hero {
+  animation: attack 1s steps(5) 1,
+    cast 1s steps(4) 1s 1,
+    idle 1s steps(3) 2s infinite;
+}
 
 .enemy {
   transform: scaleX(-1);
   height: 117px;
   width: 156px;
   filter: invert(50%);
-  animation: attack 1s steps(5) 1,
-    cast 1s steps(4) 1s 1,
-    idle 1s steps(3) 2s infinite;
 }
 
 .player {
   height: 117px;
   width: 156px;
-  animation: attack 1s steps(5) 1,
-    cast 1s steps(4) 1s 1,
-    idle 1s steps(3) 2s infinite;
 }
 
 @keyframes attack {

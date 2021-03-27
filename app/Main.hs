@@ -105,9 +105,9 @@ runApp app = app
 initialModel :: Model
 initialModel =
   let playerWithPos =
-        (Hero {name = "hans", ability1 = Fireball}, Pos {x = 0, y = 0})
+        (Hero {name = "SciFi bro", ability1 = Fireball}, Pos {x = 0, y = 0})
       enemyWithPos =
-        (Hero {name = "knight", ability1 = Shatter}, Pos {x = 4, y = 4})
+        (Hero {name = "the baddies", ability1 = Shatter}, Pos {x = 4, y = 4})
       pos = snd playerWithPos
    in Model
         { grid =
@@ -148,16 +148,20 @@ viewModel x =
     [ link_ [rel_ "stylesheet", href_ "assets/style.css"]
     , link_ [rel_ "icon", href_ "assets/favicon.ico"]
     , div_
-        [class_ "grid"]
-        [ div_
-            [class_ "hero-box"]
-            [ div_ [class_ "player"] []
-            , div_ [class_ "hero-name"] [text (ms $ name $ player x)]
-            ]
+        [class_ "container"]
+        [ h1_ [class_ "text"] [text "sonny76"]
         , div_
-            [class_ "hero-box"]
-            [ div_ [class_ "enemy"] []
-            , div_ [class_ "hero-name"] [text (ms $ name $ enemy x)]
+            [class_ "grid"]
+            [ div_
+                [class_ "hero-box"]
+                [ div_ [class_ "hero player"] []
+                , div_ [class_ "text"] [text (ms $ name $ player x)]
+                ]
+            , div_
+                [class_ "hero-box"]
+                [ div_ [class_ "hero enemy"] []
+                , div_ [class_ "text"] [text (ms $ name $ enemy x)]
+                ]
             ]
         ]
     ]
