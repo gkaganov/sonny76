@@ -21,6 +21,8 @@ import Network.WebSockets
 -- IO Monad
 import Control.Monad.IO.Class
 
+import qualified Data.Map as M
+
 gridSize :: Integer
 gridSize = 5
 
@@ -74,6 +76,7 @@ data Model =
     { grid :: Grid
     , player :: Hero
     , enemy :: Hero
+    , slashing :: Bool
     }
   deriving (Eq)
 
@@ -83,6 +86,8 @@ data Action
   | SubtractOne
   | NoOp
   | SayHelloWorld
+  | SlashStart
+  | AnimationEnd
   deriving (Show, Eq)
 -- | jsaddle runApp
 #ifndef __GHCJS__
@@ -117,6 +122,7 @@ initialModel =
               ] -- List.initialize (gridSize * gridSize) (makeTile playerWithPos enemyWithPos)
         , player = fst playerWithPos
         , enemy = fst enemyWithPos
+        , slashing = False
         }
 
 -- | Entry point for a miso application
@@ -127,7 +133,7 @@ main = runApp $ startApp App {..}
     model = initialModel -- initial model
     update = updateModel -- update function
     view = viewModel -- view function
-    events = defaultEvents -- default delegated events
+    events = M.insert "animationend" True defaultEvents -- default delegated events
     subs = [] -- empty subscription list
     mountPoint = Nothing -- mount point for application (Nothing defaults to 'body')
     logLevel = Off -- used during prerendering to see if the VDOM and DOM are in synch (only used with `miso` function)
@@ -139,29 +145,42 @@ updateModel SubtractOne m = noEff m
 updateModel NoOp m = noEff m
 updateModel SayHelloWorld m =
   m <# do liftIO (putStrLn "Hello World") >> pure NoOp
+updateModel SlashStart m = noEff m {slashing = True}
+updateModel AnimationEnd m = noEff m {slashing = False}
 
 -- | Constructs a virtual DOM from a model
 viewModel :: Model -> View Action
-viewModel x =
-  body_
-    []
-    [ link_ [rel_ "stylesheet", href_ "assets/style.css"]
-    , link_ [rel_ "icon", href_ "assets/favicon.ico"]
-    , div_
-        [class_ "container"]
-        [ h1_ [class_ "text"] [text "sonny76"]
+viewModel model =
+  let clickHandler = on "click" emptyDecoder $ \() -> AnimationEnd
+      animationEndHandler = on "animationend" emptyDecoder $ \() -> AnimationEnd
+   in body_
+        []
+        [ link_ [rel_ "stylesheet", href_ "assets/style.css"]
+        , link_ [rel_ "icon", href_ "assets/favicon.ico"]
         , div_
-            [class_ "grid"]
-            [ div_
-                [class_ "hero-box"]
-                [ div_ [class_ "hero player"] []
-                , div_ [class_ "text"] [text (ms $ name $ player x)]
-                ]
+            [class_ "container"]
+            [ h1_ [class_ "text"] [text "sonny76"]
             , div_
-                [class_ "hero-box"]
-                [ div_ [class_ "hero enemy"] []
-                , div_ [class_ "text"] [text (ms $ name $ enemy x)]
+                [class_ "grid"]
+                [ div_
+                    [class_ "hero-box"]
+                    [ div_
+                        [ class_
+                            (if slashing model
+                               then "slashing hero player"
+                               else "idling hero player")
+                        , clickHandler
+                        , animationEndHandler
+                        ]
+                        []
+                    , div_ [class_ "text"] [text $ ms $ name $ player model]
+                    ]
+                , div_
+                    [class_ "hero-box"]
+                    [ div_ [class_ "idling hero enemy"] []
+                    , div_ [class_ "text"] [text $ ms $ name $ enemy model]
+                    ]
                 ]
+            , div_ [class_ "pixel"] [p_ [onClick SlashStart] [text "slash"]]
             ]
         ]
-    ]

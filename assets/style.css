@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: url("scifi-background.gif");
+  /* background: url("scifi-background.gif"); */
   background-size: cover;
   height: 95vh;
 }
@@ -23,35 +23,38 @@
 }
 
 .text {
-  color: white;
+  /* color: white; */
+}
+
+.slashing {
+  animation: slash 0.5s steps(5);
+}
+
+.idling {
+  animation: idle 1s steps(3) infinite;
 }
 
 .hero {
-  animation: attack 1s steps(5) 1,
-    cast 1s steps(4) 1s 1,
-    idle 1s steps(3) 2s infinite;
+  height: 117px;
+  width: 156px;
 }
 
 .enemy {
   transform: scaleX(-1);
-  height: 117px;
-  width: 156px;
   filter: invert(50%);
 }
 
 .player {
-  height: 117px;
-  width: 156px;
 }
 
-@keyframes attack {
+@keyframes slash {
   from {
-    background: url("attack.png");
+    background: url("slash.png");
     background-position: 0px;
   }
 
   to {
-    background: url("attack.png");
+    background: url("slash.png");
     background-position: 780px;
   }
 }
@@ -78,4 +81,60 @@
     background: url("idle.png");
     background-position: 468px;
   }
+}
+
+.pixel {
+  font-size: 25px;
+  color: white;
+  height: auto;
+  margin: 10px;
+  font-family: 'VT323';
+  position: relative;
+  display: inline-block;
+  vertical-align: top;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.pixel:active {
+  top: 2px;
+}
+
+.pixel {
+  line-height: 0;
+  image-rendering: optimizeSpeed;
+  image-rendering: crisp-edges;
+  border-style: solid;
+  border-width: 20px;
+  border-image: url(https://i.imgur.com/sREM8Yn.png) 20 stretch;
+}
+
+.pixel p {
+  display: inline-block;
+  vertical-align: top;
+  position: relative;
+  width: 150px;
+  text-align: center;
+  margin: -20px -20px;
+  line-height: 20px;
+  padding: 10px 20px;
+  background: #000000;
+  background:
+    linear-gradient(135deg, transparent 10px, #000000 0) top left,
+    linear-gradient(225deg, transparent 10px, #000000 0) top right,
+    linear-gradient(315deg, transparent 10px, #000000 0) bottom right,
+    linear-gradient(45deg, transparent 10px, #000000 0) bottom left;
+  background-size: 50% 50%;
+  background-repeat: no-repeat;
+  background-image:
+    radial-gradient(circle at 0 0, rgba(204, 0, 0, 0) 14px, #000000 15px),
+    radial-gradient(circle at 100% 0, rgba(204, 0, 0, 0) 14px, #000000 15px),
+    radial-gradient(circle at 100% 100%, rgba(204, 0, 0, 0) 14px, #000000 15px),
+    radial-gradient(circle at 0 100%, rgba(204, 0, 0, 0) 14px, #000000 15px);
 }
