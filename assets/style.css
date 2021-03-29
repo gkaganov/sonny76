@@ -27,14 +27,15 @@
 }
 
 .slashing {
-  animation: slash 0.5s steps(5);
+  animation: run 1s steps(6), slash 0.75s 1s steps(5);
 }
 
 .idling {
-  animation: idle 1s steps(3) infinite;
+  animation: idle 2s infinite steps(3);
 }
 
 .hero {
+  position: relative;
   height: 117px;
   width: 156px;
 }
@@ -48,14 +49,30 @@
 }
 
 @keyframes slash {
-  from {
+  0% {
     background: url("slash.png");
     background-position: 0px;
+    left: 250px;
+  }
+
+  100% {
+    background: url("slash.png");
+    background-position: 780px;
+    left: 250px;
+  }
+}
+
+@keyframes run {
+  from {
+    background: url("run.png");
+    background-position: 0px;
+    left: 0px;
   }
 
   to {
-    background: url("slash.png");
-    background-position: 780px;
+    background: url("run.png");
+    background-position: 936px;
+    left: 250px;
   }
 }
 

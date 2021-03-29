@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -21,7 +22,9 @@ import Network.WebSockets
 -- IO Monad
 import Control.Monad.IO.Class
 
+import Data.Aeson
 import qualified Data.Map as M
+-- import Data.Text (Text)
 
 gridSize :: Integer
 gridSize = 5
@@ -77,6 +80,7 @@ data Model =
     , player :: Hero
     , enemy :: Hero
     , slashing :: Bool
+    , running :: Bool
     }
   deriving (Eq)
 
@@ -88,6 +92,7 @@ data Action
   | SayHelloWorld
   | SlashStart
   | AnimationEnd
+  | StoppedRunning
   deriving (Show, Eq)
 -- | jsaddle runApp
 #ifndef __GHCJS__
@@ -110,7 +115,7 @@ runApp app = app
 initialModel :: Model
 initialModel =
   let playerWithPos =
-        (Hero {name = "SciFi bro", ability1 = Fireball}, Pos {x = 0, y = 0})
+        (Hero {name = "bro", ability1 = Fireball}, Pos {x = 0, y = 0})
       enemyWithPos =
         (Hero {name = "the baddies", ability1 = Shatter}, Pos {x = 4, y = 4})
       pos = snd playerWithPos
@@ -119,10 +124,11 @@ initialModel =
             Grid
               [ Tile
                   {pos = pos, hero = Nothing, selected = False, hovered = False}
-              ] -- List.initialize (gridSize * gridSize) (makeTile playerWithPos enemyWithPos)
+              ]
         , player = fst playerWithPos
         , enemy = fst enemyWithPos
         , slashing = False
+        , running = False
         }
 
 -- | Entry point for a miso application
@@ -144,15 +150,33 @@ updateModel AddOne m = noEff m
 updateModel SubtractOne m = noEff m
 updateModel NoOp m = noEff m
 updateModel SayHelloWorld m =
-  m <# do liftIO (putStrLn "Hello World") >> pure NoOp
-updateModel SlashStart m = noEff m {slashing = True}
+  m <# do liftIO (putStrLn "Hello World yo!") >> pure NoOp
+updateModel SlashStart m = noEff m {slashing = True, running = True}
 updateModel AnimationEnd m = noEff m {slashing = False}
+updateModel StoppedRunning m = noEff m {running = False}
+
+-- classNameDecoder :: Decoder Value
+-- classNameDecoder =
+--   Decoder
+--     { decodeAt = DecodeTarget mempty
+--     , decoder = withObject "event" $ \o -> o .: "animationName"
+--     }
+--
+-- onEvent :: MisoString -> Action -> Attribute Action
+-- onEvent eventName action =
+--   on eventName classNameDecoder $
+--     \case
+--       String name -> if name == className then action else NoOp
+--       _ -> error "Unexpected case"
 
 -- | Constructs a virtual DOM from a model
 viewModel :: Model -> View Action
 viewModel model =
-  let clickHandler = on "click" emptyDecoder $ \() -> AnimationEnd
-      animationEndHandler = on "animationend" emptyDecoder $ \() -> AnimationEnd
+  let animationEndHandler =
+        on "animationend" emptyDecoder $ \() ->
+          if running model
+            then StoppedRunning
+            else AnimationEnd
    in body_
         []
         [ link_ [rel_ "stylesheet", href_ "assets/style.css"]
@@ -169,7 +193,7 @@ viewModel model =
                             (if slashing model
                                then "slashing hero player"
                                else "idling hero player")
-                        , clickHandler
+                        -- , onEvent "animationstart" SayHelloWorld
                         , animationEndHandler
                         ]
                         []

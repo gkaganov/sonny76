@@ -30,6 +30,8 @@ executable sonny76-exe
       base >=4.7 && <5
     , miso
     , containers
+    , aeson
+    , text
 
   if !impl(ghcjs)
     build-depends:
