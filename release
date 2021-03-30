@@ -3,4 +3,6 @@ nix-env -iA cachix -f https://cachix.org/api/v1/install
 # optional use of cache
 cachix use miso-haskell
 
-# hier kommt noch was
+# TODO: snippet for nixos config
+
+nix-build

@@ -24,8 +24,10 @@ import Control.Monad.IO.Class
 
 import Data.Aeson
 import qualified Data.Map as M
--- import Data.Text (Text)
+import Data.Text
+import Data.Text.Conversions
 
+-- import Data.Text (Text)
 gridSize :: Integer
 gridSize = 5
 
@@ -80,19 +82,15 @@ data Model =
     , player :: Hero
     , enemy :: Hero
     , slashing :: Bool
-    , running :: Bool
     }
   deriving (Eq)
 
 -- | Sum type for application events
 data Action
-  = AddOne
-  | SubtractOne
-  | NoOp
-  | SayHelloWorld
+  = NoOp
   | SlashStart
-  | AnimationEnd
-  | StoppedRunning
+  | SlashEnd
+  | PrintText Text
   deriving (Show, Eq)
 -- | jsaddle runApp
 #ifndef __GHCJS__
@@ -128,14 +126,13 @@ initialModel =
         , player = fst playerWithPos
         , enemy = fst enemyWithPos
         , slashing = False
-        , running = False
         }
 
 -- | Entry point for a miso application
 main :: IO ()
 main = runApp $ startApp App {..}
   where
-    initialAction = SayHelloWorld -- initial action to be executed on application load
+    initialAction = NoOp -- initial action to be executed on application load
     model = initialModel -- initial model
     update = updateModel -- update function
     view = viewModel -- view function
@@ -146,65 +143,58 @@ main = runApp $ startApp App {..}
 
 -- | Updates model, optionally introduces side effects
 updateModel :: Action -> Model -> Effect Action Model
-updateModel AddOne m = noEff m
-updateModel SubtractOne m = noEff m
 updateModel NoOp m = noEff m
-updateModel SayHelloWorld m =
-  m <# do liftIO (putStrLn "Hello World yo!") >> pure NoOp
-updateModel SlashStart m = noEff m {slashing = True, running = True}
-updateModel AnimationEnd m = noEff m {slashing = False}
-updateModel StoppedRunning m = noEff m {running = False}
+updateModel SlashStart m = noEff m {slashing = True}
+updateModel SlashEnd m = noEff m {slashing = False}
+updateModel (PrintText t) m =
+  m <# do liftIO (putStrLn $ fromText t) >> pure NoOp
 
--- classNameDecoder :: Decoder Value
--- classNameDecoder =
---   Decoder
---     { decodeAt = DecodeTarget mempty
---     , decoder = withObject "event" $ \o -> o .: "animationName"
---     }
---
--- onEvent :: MisoString -> Action -> Attribute Action
--- onEvent eventName action =
---   on eventName classNameDecoder $
---     \case
---       String name -> if name == className then action else NoOp
---       _ -> error "Unexpected case"
+animationNameDecoder :: Decoder Value
+animationNameDecoder =
+  Decoder
+    { decodeAt = DecodeTarget mempty
+    , decoder = withObject "event" $ \o -> o .: "animationName"
+    }
+
+animationEndHandler :: () -> Attribute Action
+animationEndHandler () =
+  on "animationend" animationNameDecoder $ \case
+    String name ->
+      case name of
+        "slash" -> SlashEnd
+        _ -> NoOp
+    _ -> error "Unexpected case"
 
 -- | Constructs a virtual DOM from a model
 viewModel :: Model -> View Action
 viewModel model =
-  let animationEndHandler =
-        on "animationend" emptyDecoder $ \() ->
-          if running model
-            then StoppedRunning
-            else AnimationEnd
-   in body_
-        []
-        [ link_ [rel_ "stylesheet", href_ "assets/style.css"]
-        , link_ [rel_ "icon", href_ "assets/favicon.ico"]
+  body_
+    []
+    [ link_ [rel_ "stylesheet", href_ "assets/style.css"]
+    , link_ [rel_ "icon", href_ "assets/favicon.ico"]
+    , div_
+        [class_ "container"]
+        [ h1_ [class_ "text"] [text "sonny76"]
         , div_
-            [class_ "container"]
-            [ h1_ [class_ "text"] [text "sonny76"]
-            , div_
-                [class_ "grid"]
+            [class_ "grid"]
+            [ div_
+                [class_ "hero-box"]
                 [ div_
-                    [class_ "hero-box"]
-                    [ div_
-                        [ class_
-                            (if slashing model
-                               then "slashing hero player"
-                               else "idling hero player")
-                        -- , onEvent "animationstart" SayHelloWorld
-                        , animationEndHandler
-                        ]
-                        []
-                    , div_ [class_ "text"] [text $ ms $ name $ player model]
+                    [ class_
+                        (if slashing model
+                           then "slashing hero player"
+                           else "idling hero player")
+                    , animationEndHandler ()
                     ]
-                , div_
-                    [class_ "hero-box"]
-                    [ div_ [class_ "idling hero enemy"] []
-                    , div_ [class_ "text"] [text $ ms $ name $ enemy model]
-                    ]
+                    []
+                , div_ [class_ "text"] [text $ ms $ name $ player model]
                 ]
-            , div_ [class_ "pixel"] [p_ [onClick SlashStart] [text "slash"]]
+            , div_
+                [class_ "hero-box"]
+                [ div_ [class_ "idling hero enemy"] []
+                , div_ [class_ "text"] [text $ ms $ name $ enemy model]
+                ]
             ]
+        , div_ [class_ "pixel"] [p_ [onClick SlashStart] [text "slash"]]
         ]
+    ]

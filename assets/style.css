@@ -27,7 +27,7 @@
 }
 
 .slashing {
-  animation: run 1s steps(6), slash 0.75s 1s steps(5);
+  animation: run 1s steps(6), move 1s steps(6), slash 0.75s 1s steps(5);
 }
 
 .idling {
@@ -66,12 +66,19 @@
   from {
     background: url("run.png");
     background-position: 0px;
-    left: 0px;
   }
 
   to {
     background: url("run.png");
     background-position: 936px;
+  }
+}
+
+@keyframes move {
+  from {
+    left: 0px;
+  }
+  to {
     left: 250px;
   }
 }

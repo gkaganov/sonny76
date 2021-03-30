@@ -32,6 +32,7 @@ executable sonny76-exe
     , containers
     , aeson
     , text
+    , text-conversions
 
   if !impl(ghcjs)
     build-depends:
