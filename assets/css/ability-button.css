@@ -1,0 +1,47 @@
+.ability-button {
+  font-size: 25px;
+  color: white;
+  height: auto;
+  margin: 10px;
+  font-family: 'VT323';
+  position: relative;
+  display: inline-block;
+  vertical-align: top;
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+  line-height: 0;
+  image-rendering: optimizeSpeed;
+  image-rendering: crisp-edges;
+  border-style: solid;
+  border-width: 20px;
+  border-image: url("../ability-button.png") 20 stretch;
+}
+
+.ability-button:active {
+  top: 2px;
+}
+
+.ability-button p {
+  display: inline-block;
+  vertical-align: top;
+  position: relative;
+  width: 150px;
+  text-align: center;
+  margin: -20px -20px;
+  line-height: 20px;
+  padding: 10px 20px;
+  background: #000000;
+  background:
+    linear-gradient(135deg, transparent 10px, #000000 0) top left,
+    linear-gradient(225deg, transparent 10px, #000000 0) top right,
+    linear-gradient(315deg, transparent 10px, #000000 0) bottom right,
+    linear-gradient(45deg, transparent 10px, #000000 0) bottom left;
+  background-size: 50% 50%;
+  background-repeat: no-repeat;
+  background-image:
+    radial-gradient(circle at 0 0, rgba(204, 0, 0, 0) 14px, #000000 15px),
+    radial-gradient(circle at 100% 0, rgba(204, 0, 0, 0) 14px, #000000 15px),
+    radial-gradient(circle at 100% 100%, rgba(204, 0, 0, 0) 14px, #000000 15px),
+    radial-gradient(circle at 0 100%, rgba(204, 0, 0, 0) 14px, #000000 15px);
+}

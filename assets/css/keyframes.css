@@ -1,0 +1,68 @@
+:root {
+  --group-distance: 250px;
+  --idle-img: url("../idle.png");
+  --slash-img: url("../slash.png");
+  --run-img: url("../run.png");
+  --move-img: url("../move.png");
+  --cast-img: url("../cast.png");
+}
+
+@keyframes idle {
+  from {
+    background-position: 0px;
+    background-image: var(--idle-img);
+  }
+
+  to {
+    background-position: 468px;
+    background-image: var(--idle-img);
+  }
+}
+
+@keyframes slash {
+  0% {
+    background-position: 0px;
+    background-image: var(--slash-img);
+    left: var(--group-distance);
+  }
+
+  100% {
+    background-position: 780px;
+    background-image: var(--slash-img);
+    left: var(--group-distance);
+  }
+}
+
+@keyframes run {
+  from {
+    background-position: 0px;
+    background-image: var(--run-img);
+  }
+
+  to {
+    background-position: 936px;
+    background-image: var(--run-img);
+  }
+}
+
+@keyframes move {
+  from {
+    left: 0px;
+  }
+
+  to {
+    left: var(--group-distance);
+  }
+}
+
+@keyframes cast {
+  from {
+    background-position: 0px;
+    background-image: var(--cast-img);
+  }
+
+  to {
+    background-position: 624px;
+    background-image: var(--cast-img);
+  }
+}

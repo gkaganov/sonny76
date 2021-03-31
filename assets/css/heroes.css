@@ -1,0 +1,21 @@
+.slashing {
+  animation: run 1s steps(6), move 1s steps(6), slash 0.75s 1s steps(5);
+}
+
+.idling {
+  animation: idle 2s infinite steps(3);
+}
+
+.hero {
+  position: relative;
+  height: 117px;
+  width: 156px;
+}
+
+.enemy {
+  transform: scaleX(-1);
+  filter: invert(50%);
+}
+
+.player {
+}

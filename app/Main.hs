@@ -170,7 +170,7 @@ viewModel :: Model -> View Action
 viewModel model =
   body_
     []
-    [ link_ [rel_ "stylesheet", href_ "assets/style.css"]
+    [ link_ [rel_ "stylesheet", href_ "assets/css/style.css"]
     , link_ [rel_ "icon", href_ "assets/favicon.ico"]
     , div_
         [class_ "container"]
@@ -187,14 +187,14 @@ viewModel model =
                     , animationEndHandler ()
                     ]
                     []
-                , div_ [class_ "text"] [text $ ms $ name $ player model]
+                , p_ [class_ "text"] [text $ ms $ name $ player model]
                 ]
             , div_
                 [class_ "hero-box"]
                 [ div_ [class_ "idling hero enemy"] []
-                , div_ [class_ "text"] [text $ ms $ name $ enemy model]
+                , p_ [class_ "text"] [text $ ms $ name $ enemy model]
                 ]
             ]
-        , div_ [class_ "pixel"] [p_ [onClick SlashStart] [text "slash"]]
+        , div_ [class_ "ability-button"] [p_ [onClick SlashStart] [text "slash"]]
         ]
     ]
