@@ -23,3 +23,6 @@ cabal install hindent\
 ./build\
 ./run\
 firefox localhost:8080
+
+## release
+nix-build
