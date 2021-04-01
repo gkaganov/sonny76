@@ -166,7 +166,8 @@ viewModel m =
                 , style_ $
                   M.fromList [("width", "var(--health-bar-container-width)")]
                 ]
-                [ div_
+                [ div_ [class_ "health-text"] [text $ ms $ show $ health $ enemy m]
+                , div_
                     [ class_ "health-bar"
                     , style_ $ M.fromList [("width", healthBarWidth m)]
                     ]
