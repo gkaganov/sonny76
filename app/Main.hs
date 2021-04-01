@@ -3,66 +3,33 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Main
   ( main
   ) where
 
--- miso framework import
 import Miso
 import Miso.String
+
 -- jsaddle import depending on the compiler
-#ifndef __GHCJS__
 import Language.Javascript.JSaddle.Warp as JSaddle
 import qualified Network.Wai as Wai
 import Network.Wai.Application.Static
 import qualified Network.Wai.Handler.Warp as Warp
 import Network.WebSockets
-#endif
--- IO Monad
+
+-- end jsaddle import
 import Control.Monad.IO.Class
 
 import Data.Aeson
 import qualified Data.Map as M
-import Data.Text
-import Data.Text.Conversions
-
--- import Data.Text (Text)
-gridSize :: Integer
-gridSize = 5
-
-gridSpacing :: Integer
-gridSpacing = 50
-
-tileSize :: Integer
-tileSize = 150
 
 data Hero =
   Hero
     { name :: String
+    , health :: Integer
     , ability1 :: Ability
-    }
-  deriving (Eq)
-
-data Tile =
-  Tile
-    { pos :: Pos
-    , hero :: Maybe Hero
-    , selected :: Bool
-    , hovered :: Bool
-    }
-  deriving (Eq)
-
-data Pos =
-  Pos
-    { x :: Int
-    , y :: Int
-    }
-  deriving (Eq)
-
-newtype Grid =
-  Grid
-    { tiles :: [Tile]
     }
   deriving (Eq)
 
@@ -71,29 +38,27 @@ data Ability
   | Fireball
   deriving (Eq)
 
-cast :: Ability -> Grid -> Tile -> Tile -> Grid
-cast Fireball grid _ _ = grid
-cast Shatter grid _ _ = grid
-
 -- | Type synonym for an application model
 data Model =
   Model
-    { grid :: Grid
-    , player :: Hero
+    { player :: Hero
     , enemy :: Hero
     , slashing :: Bool
+    , healthChanging :: Bool
+    , lastDamageApplied :: Integer
     }
   deriving (Eq)
 
 -- | Sum type for application events
 data Action
   = NoOp
-  | SlashStart
+  | Print String
+  | Slash
   | SlashEnd
-  | PrintText Text
+  | HealthFinishedChanging
   deriving (Show, Eq)
+
 -- | jsaddle runApp
-#ifndef __GHCJS__
 runApp :: JSM () -> IO ()
 runApp f =
   Warp.runSettings
@@ -104,29 +69,17 @@ runApp f =
       case Wai.pathInfo req of
         ("assets":_) -> staticApp (defaultWebAppSettings ".") req sendResp
         _ -> JSaddle.jsaddleApp req sendResp
-#else
--- | ghcjs runApp
-runApp :: IO () -> IO ()
-runApp app = app
-#endif
+
 -- | initial model values at startup
 initialModel :: Model
 initialModel =
-  let playerWithPos =
-        (Hero {name = "bro", ability1 = Fireball}, Pos {x = 0, y = 0})
-      enemyWithPos =
-        (Hero {name = "the baddies", ability1 = Shatter}, Pos {x = 4, y = 4})
-      pos = snd playerWithPos
-   in Model
-        { grid =
-            Grid
-              [ Tile
-                  {pos = pos, hero = Nothing, selected = False, hovered = False}
-              ]
-        , player = fst playerWithPos
-        , enemy = fst enemyWithPos
-        , slashing = False
-        }
+  Model
+    { player = Hero {name = "bro", health = 1000, ability1 = Fireball}
+    , enemy = Hero {name = "the baddies", health = 1000, ability1 = Shatter}
+    , slashing = False
+    , healthChanging = False
+    , lastDamageApplied = 0
+    }
 
 -- | Entry point for a miso application
 main :: IO ()
@@ -136,7 +89,9 @@ main = runApp $ startApp App {..}
     model = initialModel -- initial model
     update = updateModel -- update function
     view = viewModel -- view function
-    events = M.insert "animationend" True defaultEvents -- default delegated events
+    events =
+      M.insert "transitionend" True $
+      M.insert "animationend" True defaultEvents -- default delegated events
     subs = [] -- empty subscription list
     mountPoint = Nothing -- mount point for application (Nothing defaults to 'body')
     logLevel = Off -- used during prerendering to see if the VDOM and DOM are in synch (only used with `miso` function)
@@ -144,10 +99,22 @@ main = runApp $ startApp App {..}
 -- | Updates model, optionally introduces side effects
 updateModel :: Action -> Model -> Effect Action Model
 updateModel NoOp m = noEff m
-updateModel SlashStart m = noEff m {slashing = True}
-updateModel SlashEnd m = noEff m {slashing = False}
-updateModel (PrintText t) m =
-  m <# do liftIO (putStrLn $ fromText t) >> pure NoOp
+updateModel (Print t) m = m <# do liftIO (putStrLn t) >> pure NoOp
+updateModel a m = noEff $ handleAnimation a $ handleDamage a m
+
+handleAnimation :: Action -> Model -> Model
+handleAnimation Slash m = m {slashing = True, healthChanging = True}
+handleAnimation SlashEnd m = m {slashing = False}
+handleAnimation HealthFinishedChanging m = m {healthChanging = False}
+handleAnimation _ m = m
+
+handleDamage :: Action -> Model -> Model
+handleDamage Slash m =
+  m {enemy = applyDamage (enemy m) 100, lastDamageApplied = 100}
+handleDamage _ m = m
+
+applyDamage :: Hero -> Integer -> Hero
+applyDamage hero damage = hero {health = health hero - damage}
 
 animationNameDecoder :: Decoder Value
 animationNameDecoder =
@@ -167,34 +134,72 @@ animationEndHandler () =
 
 -- | Constructs a virtual DOM from a model
 viewModel :: Model -> View Action
-viewModel model =
-  body_
-    []
+viewModel m =
+  div_
+    [class_ "vertical root"]
     [ link_ [rel_ "stylesheet", href_ "assets/css/style.css"]
     , link_ [rel_ "icon", href_ "assets/favicon.ico"]
+    , h1_ [class_ "text"] [text "sonny76"]
     , div_
-        [class_ "container"]
-        [ h1_ [class_ "text"] [text "sonny76"]
-        , div_
-            [class_ "grid"]
+        [class_ "horizontal battle-sides"]
+        [ div_
+            [class_ "vertical hero-box"]
             [ div_
-                [class_ "hero-box"]
-                [ div_
-                    [ class_
-                        (if slashing model
-                           then "slashing hero player"
-                           else "idling hero player")
-                    , animationEndHandler ()
-                    ]
-                    []
-                , p_ [class_ "text"] [text $ ms $ name $ player model]
+                [ class_ "health-bar-container"
+                , style_ $ M.fromList [("width", "var(--health-bar-width)")]
                 ]
+                [div_ [class_ "health-bar"] [div_ [class_ "hit-bar"] []]]
             , div_
-                [class_ "hero-box"]
-                [ div_ [class_ "idling hero enemy"] []
-                , p_ [class_ "text"] [text $ ms $ name $ enemy model]
+                [ class_
+                    (if slashing m
+                       then "slashing hero player"
+                       else "idling hero player")
+                , animationEndHandler ()
                 ]
+                []
+            , p_ [class_ "text"] [text $ ms $ name $ player m]
             ]
-        , div_ [class_ "ability-button"] [p_ [onClick SlashStart] [text "slash"]]
+        , div_
+            [class_ "vertical hero-box"]
+            [ div_
+                [ class_ "health-bar-container"
+                , style_ $
+                  M.fromList [("width", "var(--health-bar-container-width)")]
+                ]
+                [ div_
+                    [ class_ "health-bar"
+                    , style_ $ M.fromList [("width", healthBarWidth m)]
+                    ]
+                    [ div_
+                        [ class_ "hit-bar"
+                        , on "transitionend" emptyDecoder $ \() ->
+                            HealthFinishedChanging
+                        , style_ $ M.fromList [("width", hitBarWidth m)]
+                        ]
+                        []
+                    ]
+                ]
+            , div_ [class_ "idling hero enemy"] []
+            , p_ [class_ "text"] [text $ ms $ name $ enemy m]
+            ]
         ]
+    , div_ [class_ "ability-button"] [p_ [onClick Slash] [text "slash"]]
     ]
+
+healthBarWidth :: Model -> MisoString
+healthBarWidth m =
+  ms
+    ("calc(" ++
+     "var(--health-bar-width) * " ++
+     "(" ++ show (health $ enemy m) ++ "/" ++ show 1000 ++ ")")
+
+hitBarWidth :: Model -> MisoString
+hitBarWidth m =
+  ms
+    ("calc(" ++
+     "var(--health-bar-width) * " ++
+     "(" ++
+     (if healthChanging m
+        then show (lastDamageApplied m)
+        else "0") ++
+     "/" ++ show 1000 ++ ")")

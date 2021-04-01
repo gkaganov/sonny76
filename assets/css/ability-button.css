@@ -1,17 +1,12 @@
 .ability-button {
+  position: relative;
   font-size: 25px;
   color: white;
   height: auto;
-  margin: 10px;
   font-family: 'VT323';
-  position: relative;
-  display: inline-block;
-  vertical-align: top;
   text-transform: uppercase;
   cursor: pointer;
   user-select: none;
-  line-height: 0;
-  image-rendering: optimizeSpeed;
   image-rendering: crisp-edges;
   border-style: solid;
   border-width: 20px;
@@ -23,15 +18,11 @@
 }
 
 .ability-button p {
-  display: inline-block;
-  vertical-align: top;
-  position: relative;
   width: 150px;
   text-align: center;
   margin: -20px -20px;
   line-height: 20px;
   padding: 10px 20px;
-  background: #000000;
   background:
     linear-gradient(135deg, transparent 10px, #000000 0) top left,
     linear-gradient(225deg, transparent 10px, #000000 0) top right,

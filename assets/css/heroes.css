@@ -1,5 +1,13 @@
+:root {
+  --slash-duration: 0.75s;
+  --slash-steps: 5;
+  --slash-frametime: calc(var(--slash-duration) / var(--slash-steps));
+  --slash-steps-until-hit: 2;
+  --slash-hit-timing: calc(var(--slash-frametime) * var(--slash-steps-until-hit));
+}
+
 .slashing {
-  animation: run 1s steps(6), move 1s steps(6), slash 0.75s 1s steps(5);
+  animation: slash var(--slash-duration) steps(var(--slash-steps));
 }
 
 .idling {
@@ -7,6 +15,7 @@
 }
 
 .hero {
+  image-rendering: crisp-edges;
   position: relative;
   height: 117px;
   width: 156px;
@@ -15,7 +24,4 @@
 .enemy {
   transform: scaleX(-1);
   filter: invert(50%);
-}
-
-.player {
 }

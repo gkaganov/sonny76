@@ -1,27 +1,27 @@
-.container {
+.vertical {
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* background: url("scifi-background.gif"); */
-  background-size: cover;
-  height: 95vh;
+  justify-content: center;
 }
 
-.grid {
+.horizontal {
   display: flex;
-  gap: 10rem;
   flex-direction: row;
   align-items: center;
   justify-content: center;
 }
 
-.hero-box {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+.root {
+  /* background: url("scifi-background.gif"); */
+  /* background-size: cover; */
+  /* height: 95vh; */
 }
 
 .text {
   /* color: white; */
+}
+
+.battle-sides {
+  gap: 150px;
 }

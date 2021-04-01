@@ -1,0 +1,32 @@
+:root {
+  --health-bar-container-width: 200px;
+  --health-bar-container-padding: 5px;
+  --health-bar-width: calc(var(--health-bar-container-width) - 2 * var(--health-bar-container-padding));
+  --health-bar-delay: calc(1s + var(--slash-hit-timing));
+}
+
+.health-bar-container {
+  margin-bottom: 20px;
+  box-sizing: border-box;
+  height: 20px;
+  padding: var(--health-bar-container-padding);
+  background: #ddd;
+  border-radius: 5px;
+  position: relative;
+}
+
+.health-bar {
+  background: #c54;
+  height: 10px;
+  position: relative;
+  transition: width 0.5s var(--health-bar-delay);
+}
+
+.hit-bar {
+  background: rgba(255, 255, 255, 0.6);
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  transition: width .5s var(--slash-hit-timing);
+}
