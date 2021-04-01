@@ -1,0 +1,30 @@
+@use 'heroes'
+
+$padding: 5px
+
+:root
+  --health-bar-container-width: 200px
+  --health-bar-width: calc(var(--health-bar-container-width) - 2 * #{$padding})
+
+.health-bar-container
+  margin-bottom: 20px
+  box-sizing: border-box
+  height: 20px
+  width: var(--health-bar-container-width)
+  padding: $padding
+  background: #ddd
+  border-radius: 5px
+  position: relative
+
+.health-text
+  position: absolute
+  top: 0
+  z-index: 1
+  color: white
+
+.health-bar
+  background: #c54
+  height: 10px
+  position: relative
+  transition: width 0.5s
+  transition-delay: heroes.$slash-hit-timing
