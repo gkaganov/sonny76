@@ -1,8 +1,8 @@
-  $slash-duration: 0.75s
-  $slash-steps: 5
-  $slash-frametime: $slash-duration) / $slash-steps
-  $slash-steps-until-hit: 2
-  $slash-hit-timing: $slash-frametime * $slash-steps-until-hit
+$slash-duration: 0.75s
+$slash-steps: 5
+$slash-frametime: $slash-duration / $slash-steps
+$slash-steps-until-hit: 2
+$slash-hit-timing: $slash-frametime * $slash-steps-until-hit
 
 .slashing
   animation: slash $slash-duration steps($slash-steps)

@@ -24,5 +24,5 @@ cabal install hindent\
 ./run\
 firefox localhost:8080
 
-## release
+## release (takes ~2h at first run)
 nix-build

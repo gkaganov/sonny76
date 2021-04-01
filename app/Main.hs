@@ -11,14 +11,14 @@ module Main
 
 import Miso
 import Miso.String
-
--- jsaddle import depending on the compiler
+-- jsaddle import for local dev
+#ifndef __GHCJS__
 import Language.Javascript.JSaddle.Warp as JSaddle
 import qualified Network.Wai as Wai
 import Network.Wai.Application.Static
 import qualified Network.Wai.Handler.Warp as Warp
 import Network.WebSockets
-
+#endif
 -- end jsaddle import
 import Control.Monad.IO.Class
 
@@ -55,8 +55,8 @@ data Action
   | SlashEnd
   | HealthFinishedChanging
   deriving (Show, Eq)
-
 -- | jsaddle runApp
+#ifndef __GHCJS__
 runApp :: JSM () -> IO ()
 runApp f =
   Warp.runSettings
@@ -67,7 +67,11 @@ runApp f =
       case Wai.pathInfo req of
         ("assets":_) -> staticApp (defaultWebAppSettings ".") req sendResp
         _ -> JSaddle.jsaddleApp req sendResp
-
+#else
+-- | ghcjs runApp
+runApp :: IO () -> IO ()
+runApp app = app
+#endif
 -- | initial model values at startup
 initialModel :: Model
 initialModel =
