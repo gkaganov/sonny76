@@ -1,0 +1,21 @@
+  $slash-duration: 0.75s
+  $slash-steps: 5
+  $slash-frametime: $slash-duration) / $slash-steps
+  $slash-steps-until-hit: 2
+  $slash-hit-timing: $slash-frametime * $slash-steps-until-hit
+
+.slashing
+  animation: slash $slash-duration steps($slash-steps)
+
+.idling
+  animation: idle 2s infinite steps(3)
+
+.hero
+  image-rendering: crisp-edges
+  position: relative
+  height: 117px
+  width: 156px
+
+.enemy
+  transform: scaleX(-1)
+  filter: invert(50%)
