@@ -1,4 +1,5 @@
 $group-distance: 285px
+
 $idle-img: url('../spritesheets/idle.png')
 $slash-img: url('../spritesheets/slash.png')
 $cast-img: url('../spritesheets/cast.png')
@@ -12,7 +13,7 @@ $cast-img: url('../spritesheets/cast.png')
     background-position: -468px
     background-image: $idle-img
 
-@keyframes slash
+@keyframes left-slash
   from
     background-position: 0px
     background-image: $slash-img
@@ -22,6 +23,18 @@ $cast-img: url('../spritesheets/cast.png')
     background-position: -780px
     background-image: $slash-img
     left: $group-distance
+
+@keyframes right-slash
+  from
+    background-position: 0px
+    background-image: $slash-img
+    right: $group-distance
+
+  to
+    background-position: -780px
+    background-image: $slash-img
+    right: $group-distance
+
 
 @keyframes cast
   from

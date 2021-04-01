@@ -24,36 +24,35 @@ import Control.Monad.IO.Class
 
 import Data.Aeson
 import qualified Data.Map as M
+import Debug.Trace
 
 data Hero =
   Hero
     { name :: String
     , health :: Integer
-    , ability1 :: Ability
+    , slashing :: Bool
     }
-  deriving (Eq)
-
-data Ability
-  = Shatter
-  | Fireball
-  deriving (Eq)
+  deriving (Show, Eq)
 
 -- | Type synonym for an application model
 data Model =
   Model
     { player :: Hero
     , enemy :: Hero
-    , slashing :: Bool
     }
-  deriving (Eq)
+  deriving (Show, Eq)
+
+data HeroType
+  = Player
+  | Enemy
+  deriving (Show, Eq)
 
 -- | Sum type for application events
 data Action
   = NoOp
   | Print String
-  | Slash
-  | SlashEnd
-  | HealthFinishedChanging
+  | Slash HeroType
+  | SlashEnd HeroType
   deriving (Show, Eq)
 -- | jsaddle runApp
 #ifndef __GHCJS__
@@ -76,9 +75,8 @@ runApp app = app
 initialModel :: Model
 initialModel =
   Model
-    { player = Hero {name = "bro", health = 1000, ability1 = Fireball}
-    , enemy = Hero {name = "the baddies", health = 1000, ability1 = Shatter}
-    , slashing = False
+    { player = Hero {name = "bro", health = 1000, slashing = False}
+    , enemy = Hero {name = "the baddies", health = 1000, slashing = False}
     }
 
 -- | Entry point for a miso application
@@ -100,16 +98,32 @@ main = runApp $ startApp App {..}
 updateModel :: Action -> Model -> Effect Action Model
 updateModel NoOp m = noEff m
 updateModel (Print t) m = m <# do liftIO (putStrLn t) >> pure NoOp
-updateModel a m = noEff $ handleAnimation a $ handleDamage a m
+updateModel (Slash ht) m =
+  noEff $ handleAnimation (Slash ht) $ handleDamage (Slash ht) m
+updateModel (SlashEnd ht) m = noEff $ handleAnimation (SlashEnd ht) m
 
 handleAnimation :: Action -> Model -> Model
-handleAnimation Slash m = m {slashing = True}
-handleAnimation SlashEnd m = m {slashing = False}
+handleAnimation (Slash herotype) m =
+  traceShowId $
+  case herotype of
+    Player -> m {player = (player m) {slashing = True}}
+    Enemy -> m {enemy = (enemy m) {slashing = True}}
+handleAnimation (SlashEnd herotype) m =
+  traceShowId $
+  case herotype of
+    Player -> handleEnemyTurn $ m {player = (player m) {slashing = False}}
+    Enemy -> m {enemy = (enemy m) {slashing = False}}
 handleAnimation _ m = m
 
 handleDamage :: Action -> Model -> Model
-handleDamage Slash m = m {enemy = applyDamage (enemy m) 100}
+handleDamage (Slash herotype) m =
+  case herotype of
+    Player -> m {enemy = applyDamage (enemy m) 100}
+    Enemy -> m {player = applyDamage (player m) 100}
 handleDamage _ m = m
+
+handleEnemyTurn :: Model -> Model
+handleEnemyTurn m = handleAnimation (Slash Enemy) $ handleDamage (Slash Enemy) m
 
 applyDamage :: Hero -> Integer -> Hero
 applyDamage hero damage = hero {health = health hero - damage}
@@ -121,12 +135,13 @@ animationNameDecoder =
     , decoder = withObject "event" $ \o -> o .: "animationName"
     }
 
-animationEndHandler :: () -> Attribute Action
-animationEndHandler () =
+animationEndHandler :: HeroType -> Attribute Action
+animationEndHandler herotype =
   on "animationend" animationNameDecoder $ \case
     String name ->
       case name of
-        "slash" -> SlashEnd
+        "left-slash" -> SlashEnd herotype
+        "right-slash" -> SlashEnd herotype
         _ -> NoOp
     _ -> error "Unexpected case"
 
@@ -153,10 +168,10 @@ viewModel m =
                 ]
             , div_
                 [ class_
-                    (if slashing m
+                    (if slashing $ player m
                        then "slashing hero player"
                        else "idling hero player")
-                , animationEndHandler ()
+                , animationEndHandler Player
                 ]
                 []
             , p_ [class_ "text"] [text $ ms $ name $ player m]
@@ -177,11 +192,20 @@ viewModel m =
                     ]
                     []
                 ]
-            , div_ [class_ "idling hero enemy"] []
+            , div_
+                [ class_
+                    (if slashing $ enemy m
+                       then "slashing hero enemy"
+                       else "idling hero enemy")
+                , animationEndHandler Enemy
+                ]
+                []
             , p_ [class_ "text"] [text $ ms $ name $ enemy m]
             ]
         ]
-    , div_ [class_ "ability-button"] [p_ [onClick Slash] [text "slash"]]
+    , div_
+        [class_ "ability-button"]
+        [p_ [onClick $ Slash Player] [text "slash"]]
     ]
 
 healthBarWidth :: Model -> MisoString

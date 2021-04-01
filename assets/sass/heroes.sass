@@ -4,8 +4,11 @@ $slash-frametime: $slash-duration / $slash-steps
 $slash-steps-until-hit: 2
 $slash-hit-timing: $slash-frametime * $slash-steps-until-hit
 
-.slashing
-  animation: slash $slash-duration steps($slash-steps)
+.slashing.player
+  animation: left-slash $slash-duration steps($slash-steps)
+
+.slashing.enemy
+  animation: right-slash $slash-duration steps($slash-steps)
 
 .idling
   animation: idle 2s infinite steps(3)
