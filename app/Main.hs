@@ -31,6 +31,7 @@ data Hero =
     { name :: String
     , health :: Integer
     , slashing :: Bool
+    , dead :: Bool
     }
   deriving (Show, Eq)
 
@@ -39,6 +40,7 @@ data Model =
   Model
     { player :: Hero
     , enemy :: Hero
+    , battleFinished :: Bool
     }
   deriving (Show, Eq)
 
@@ -53,6 +55,7 @@ data Action
   | Print String
   | Slash HeroType
   | SlashEnd HeroType
+  | Restart
   deriving (Show, Eq)
 -- | jsaddle runApp
 #ifndef __GHCJS__
@@ -75,8 +78,12 @@ runApp app = app
 initialModel :: Model
 initialModel =
   Model
-    { player = Hero {name = "bro", health = 1000, slashing = False}
-    , enemy = Hero {name = "the baddies", health = 1000, slashing = False}
+    { player =
+        Hero {name = "bro", health = 1000, slashing = False, dead = False}
+    , enemy =
+        Hero
+          {name = "the baddies", health = 1000, slashing = False, dead = False}
+    , battleFinished = False
     }
 
 -- | Entry point for a miso application
@@ -99,8 +106,13 @@ updateModel :: Action -> Model -> Effect Action Model
 updateModel NoOp m = noEff m
 updateModel (Print t) m = m <# do liftIO (putStrLn t) >> pure NoOp
 updateModel (Slash ht) m =
-  noEff $ handleAnimation (Slash ht) $ handleDamage (Slash ht) m
+  noEff $
+  if battleFinished m
+    then m
+    else checkIfBattleFinished $
+         handleAnimation (Slash ht) $ handleDamage (Slash ht) m
 updateModel (SlashEnd ht) m = noEff $ handleAnimation (SlashEnd ht) m
+updateModel Restart _ = noEff initialModel
 
 handleAnimation :: Action -> Model -> Model
 handleAnimation (Slash herotype) m =
@@ -123,10 +135,25 @@ handleDamage (Slash herotype) m =
 handleDamage _ m = m
 
 handleEnemyTurn :: Model -> Model
-handleEnemyTurn m = handleAnimation (Slash Enemy) $ handleDamage (Slash Enemy) m
+handleEnemyTurn m =
+  if dead $ enemy m
+    then m
+    else handleAnimation (Slash Enemy) $ handleDamage (Slash Enemy) m
 
 applyDamage :: Hero -> Integer -> Hero
-applyDamage hero damage = hero {health = health hero - damage}
+applyDamage hero damage = checkIfDead $ hero {health = health hero - damage}
+
+checkIfDead :: Hero -> Hero
+checkIfDead hero =
+  if health hero <= 0
+    then hero {dead = True, health = 0}
+    else hero
+
+checkIfBattleFinished :: Model -> Model
+checkIfBattleFinished m =
+  if dead (player m) || dead (enemy m)
+    then m {battleFinished = True}
+    else m
 
 animationNameDecoder :: Decoder Value
 animationNameDecoder =
@@ -152,19 +179,30 @@ viewModel m =
     [class_ "vertical root"]
     [ link_ [rel_ "stylesheet", href_ "assets/css/style.css"]
     , link_ [rel_ "icon", href_ "assets/favicon.ico"]
-    , h1_ [class_ "text"] [text "sonny76"]
+    , h1_
+        [class_ "text"]
+        [ text $
+          if battleFinished m
+            then "YOU WIN"
+            else "sonny76"
+        ]
     , div_
         [class_ "horizontal battle-sides"]
         [ div_
             [class_ "vertical hero-box"]
             [ div_
                 [ class_ "health-bar-container"
-                , style_ $ M.fromList [("width", "var(--health-bar-width)")]
+                , style_ $
+                  M.fromList [("width", "var(--health-bar-container-width)")]
                 ]
                 [ div_
                     [class_ "health-text"]
                     [text $ ms $ show $ health $ player m]
-                , div_ [class_ "health-bar"] []
+                , div_
+                    [ class_ "health-bar"
+                    , style_ $ M.fromList [("width", healthBarWidth m Player)]
+                    ]
+                    []
                 ]
             , div_
                 [ class_
@@ -188,7 +226,7 @@ viewModel m =
                     [text $ ms $ show $ health $ enemy m]
                 , div_
                     [ class_ "health-bar"
-                    , style_ $ M.fromList [("width", healthBarWidth m)]
+                    , style_ $ M.fromList [("width", healthBarWidth m Enemy)]
                     ]
                     []
                 ]
@@ -205,12 +243,29 @@ viewModel m =
         ]
     , div_
         [class_ "ability-button"]
-        [p_ [onClick $ Slash Player] [text "slash"]]
+        [ p_
+            [ onClick $
+              if battleFinished m
+                then Restart
+                else Slash Player
+            ]
+            [ text $
+              if battleFinished m
+                then "restart"
+                else "slash"
+            ]
+        ]
     ]
 
-healthBarWidth :: Model -> MisoString
-healthBarWidth m =
+healthBarWidth :: Model -> HeroType -> MisoString
+healthBarWidth m herotype =
   ms
     ("calc(" ++
      "var(--health-bar-width) * " ++
-     "(" ++ show (health $ enemy m) ++ "/" ++ show 1000 ++ ")")
+     "(" ++
+     show
+       (health $
+        case herotype of
+          Player -> player m
+          Enemy -> enemy m) ++
+     "/" ++ show 1000 ++ "))")
