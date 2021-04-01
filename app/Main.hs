@@ -44,8 +44,6 @@ data Model =
     { player :: Hero
     , enemy :: Hero
     , slashing :: Bool
-    , healthChanging :: Bool
-    , lastDamageApplied :: Integer
     }
   deriving (Eq)
 
@@ -77,8 +75,6 @@ initialModel =
     { player = Hero {name = "bro", health = 1000, ability1 = Fireball}
     , enemy = Hero {name = "the baddies", health = 1000, ability1 = Shatter}
     , slashing = False
-    , healthChanging = False
-    , lastDamageApplied = 0
     }
 
 -- | Entry point for a miso application
@@ -103,14 +99,12 @@ updateModel (Print t) m = m <# do liftIO (putStrLn t) >> pure NoOp
 updateModel a m = noEff $ handleAnimation a $ handleDamage a m
 
 handleAnimation :: Action -> Model -> Model
-handleAnimation Slash m = m {slashing = True, healthChanging = True}
+handleAnimation Slash m = m {slashing = True}
 handleAnimation SlashEnd m = m {slashing = False}
-handleAnimation HealthFinishedChanging m = m {healthChanging = False}
 handleAnimation _ m = m
 
 handleDamage :: Action -> Model -> Model
-handleDamage Slash m =
-  m {enemy = applyDamage (enemy m) 100, lastDamageApplied = 100}
+handleDamage Slash m = m {enemy = applyDamage (enemy m) 100}
 handleDamage _ m = m
 
 applyDamage :: Hero -> Integer -> Hero
@@ -148,7 +142,11 @@ viewModel m =
                 [ class_ "health-bar-container"
                 , style_ $ M.fromList [("width", "var(--health-bar-width)")]
                 ]
-                [div_ [class_ "health-bar"] [div_ [class_ "hit-bar"] []]]
+                [ div_
+                    [class_ "health-text"]
+                    [text $ ms $ show $ health $ player m]
+                , div_ [class_ "health-bar"] []
+                ]
             , div_
                 [ class_
                     (if slashing m
@@ -166,19 +164,14 @@ viewModel m =
                 , style_ $
                   M.fromList [("width", "var(--health-bar-container-width)")]
                 ]
-                [ div_ [class_ "health-text"] [text $ ms $ show $ health $ enemy m]
+                [ div_
+                    [class_ "health-text"]
+                    [text $ ms $ show $ health $ enemy m]
                 , div_
                     [ class_ "health-bar"
                     , style_ $ M.fromList [("width", healthBarWidth m)]
                     ]
-                    [ div_
-                        [ class_ "hit-bar"
-                        , on "transitionend" emptyDecoder $ \() ->
-                            HealthFinishedChanging
-                        , style_ $ M.fromList [("width", hitBarWidth m)]
-                        ]
-                        []
-                    ]
+                    []
                 ]
             , div_ [class_ "idling hero enemy"] []
             , p_ [class_ "text"] [text $ ms $ name $ enemy m]
@@ -193,14 +186,3 @@ healthBarWidth m =
     ("calc(" ++
      "var(--health-bar-width) * " ++
      "(" ++ show (health $ enemy m) ++ "/" ++ show 1000 ++ ")")
-
-hitBarWidth :: Model -> MisoString
-hitBarWidth m =
-  ms
-    ("calc(" ++
-     "var(--health-bar-width) * " ++
-     "(" ++
-     (if healthChanging m
-        then show (lastDamageApplied m)
-        else "0") ++
-     "/" ++ show 1000 ++ ")")
