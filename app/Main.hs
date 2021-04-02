@@ -231,8 +231,10 @@ viewModel m =
                     [class_ "health-amount player"]
                     [text $ ms $ show $ health $ player m]
                 , div_
-                    [ class_ "health-bar player"
-                    , classList_ [calculateHealthBarColorLabel $ player m]
+                    [ classList_
+                        [ ("health-bar player", True)
+                        , calculateHealthBarColorLabel $ player m
+                        ]
                     , style_ $
                       M.fromList [("width", buildHealthBarWidth m Player)]
                     ]
@@ -274,8 +276,10 @@ viewModel m =
                     [class_ "health-amount enemy"]
                     [text $ ms $ show $ health $ enemy m]
                 , div_
-                    [ class_ "health-bar enemy"
-                    , classList_ [calculateHealthBarColorLabel $ enemy m]
+                    [ classList_
+                        [ ("health-bar enemy", True)
+                        , calculateHealthBarColorLabel $ enemy m
+                        ]
                     , style_ $
                       M.fromList [("width", buildHealthBarWidth m Enemy)]
                     ]
@@ -310,8 +314,10 @@ viewModel m =
     , div_
         [class_ "horizontal ability-bar"]
         [ div_
-            [ class_ "ability-button"
-            , classList_ [("enabled", playerTurn m || battleFinished m)]
+            [ classList_
+                [ ("ability-button", True)
+                , ("enabled", playerTurn m || battleFinished m)
+                ]
             ]
             [ p_
                 [ onClick $
@@ -328,8 +334,10 @@ viewModel m =
                 ]
             ]
         , div_
-            [ class_ "ability-button"
-            , classList_ [("enabled", playerTurn m || battleFinished m)]
+            [ classList_
+                [ ("ability-button", True)
+                , ("enabled", playerTurn m || battleFinished m)
+                ]
             ]
             [ p_
                 [ onClick $

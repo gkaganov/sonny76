@@ -26,3 +26,6 @@ firefox localhost:8080
 
 ## release (takes ~2h at first run)
 nix-build
+
+## deploy
+nix-build && ./deploy
