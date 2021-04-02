@@ -16,15 +16,21 @@ $padding: 5px
   border-radius: 5px
   position: relative
 
-.health-text
-  position: absolute
-  top: 0
-  z-index: 1
-  color: white
-
 .health-bar
   background: #c54
   height: 10px
-  position: relative
+  position: absolute
   transition: width 0.5s
   transition-delay: heroes.$slash-hit-timing
+  &.enemy
+    right: $padding
+
+.health-text
+  position: absolute
+  top: 4px
+  z-index: 1
+  font-size: 8px
+  &.player
+    right: 10px
+  &.enemy
+    left: 10px

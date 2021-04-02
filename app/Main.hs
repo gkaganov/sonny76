@@ -11,14 +11,14 @@ module Main
 
 import Miso
 import Miso.String
+
 -- jsaddle import for local dev
-#ifndef __GHCJS__
 import Language.Javascript.JSaddle.Warp as JSaddle
 import qualified Network.Wai as Wai
 import Network.Wai.Application.Static
 import qualified Network.Wai.Handler.Warp as Warp
 import Network.WebSockets
-#endif
+
 -- end jsaddle import
 import Control.Monad.IO.Class
 
@@ -41,6 +41,7 @@ data Model =
     { player :: Hero
     , enemy :: Hero
     , battleFinished :: Bool
+    , playerTurn :: Bool
     }
   deriving (Show, Eq)
 
@@ -57,8 +58,8 @@ data Action
   | SlashEnd HeroType
   | Restart
   deriving (Show, Eq)
+
 -- | jsaddle runApp
-#ifndef __GHCJS__
 runApp :: JSM () -> IO ()
 runApp f =
   Warp.runSettings
@@ -69,11 +70,7 @@ runApp f =
       case Wai.pathInfo req of
         ("assets":_) -> staticApp (defaultWebAppSettings ".") req sendResp
         _ -> JSaddle.jsaddleApp req sendResp
-#else
--- | ghcjs runApp
-runApp :: IO () -> IO ()
-runApp app = app
-#endif
+
 -- | initial model values at startup
 initialModel :: Model
 initialModel =
@@ -84,6 +81,7 @@ initialModel =
         Hero
           {name = "the baddies", health = 1000, slashing = False, dead = False}
     , battleFinished = False
+    , playerTurn = True
     }
 
 -- | Entry point for a miso application
@@ -107,11 +105,15 @@ updateModel NoOp m = noEff m
 updateModel (Print t) m = m <# do liftIO (putStrLn t) >> pure NoOp
 updateModel (Slash ht) m =
   noEff $
-  if battleFinished m
-    then m
-    else checkIfBattleFinished $
-         handleAnimation (Slash ht) $ handleDamage (Slash ht) m
-updateModel (SlashEnd ht) m = noEff $ handleAnimation (SlashEnd ht) m
+  checkIfBattleFinished $
+  handleAnimation (Slash ht) $ handleDamage (Slash ht) $ m {playerTurn = False}
+updateModel (SlashEnd ht) m =
+  noEff $
+  handleAnimation
+    (SlashEnd ht)
+    (case ht of
+       Enemy -> m {playerTurn = True}
+       Player -> m)
 updateModel Restart _ = noEff initialModel
 
 handleAnimation :: Action -> Model -> Model
@@ -179,7 +181,7 @@ viewModel m =
     [class_ "vertical root"]
     [ link_ [rel_ "stylesheet", href_ "assets/css/style.css"]
     , link_ [rel_ "icon", href_ "assets/favicon.ico"]
-    , h1_
+    , h3_
         [class_ "text"]
         [ text $
           if battleFinished m
@@ -196,10 +198,10 @@ viewModel m =
                   M.fromList [("width", "var(--health-bar-container-width)")]
                 ]
                 [ div_
-                    [class_ "health-text"]
+                    [class_ "health-text player"]
                     [text $ ms $ show $ health $ player m]
                 , div_
-                    [ class_ "health-bar"
+                    [ class_ "health-bar player"
                     , style_ $ M.fromList [("width", healthBarWidth m Player)]
                     ]
                     []
@@ -222,10 +224,10 @@ viewModel m =
                   M.fromList [("width", "var(--health-bar-container-width)")]
                 ]
                 [ div_
-                    [class_ "health-text"]
+                    [class_ "health-text enemy"]
                     [text $ ms $ show $ health $ enemy m]
                 , div_
-                    [ class_ "health-bar"
+                    [ class_ "health-bar enemy"
                     , style_ $ M.fromList [("width", healthBarWidth m Enemy)]
                     ]
                     []
@@ -242,12 +244,18 @@ viewModel m =
             ]
         ]
     , div_
-        [class_ "ability-button"]
+        [ classList_
+            [ ("ability-button", True)
+            , ("enabled", playerTurn m || battleFinished m)
+            ]
+        ]
         [ p_
             [ onClick $
               if battleFinished m
                 then Restart
-                else Slash Player
+                else if playerTurn m
+                       then Slash Player
+                       else NoOp
             ]
             [ text $
               if battleFinished m
