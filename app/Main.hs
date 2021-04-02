@@ -13,56 +13,22 @@ module Main
 
 import Miso
 import Miso.String
--- jsaddle import for local dev
+
+import Control.Monad.IO.Class
+
+import Data.Function
+
+import Data.Aeson as Aeson -- json for event decoders
+import qualified Data.Map as M
+-- import Debug.Trace
+-- jsaddle for local dev
 #ifndef __GHCJS__
 import Language.Javascript.JSaddle.Warp as JSaddle
 import qualified Network.Wai as Wai
 import Network.Wai.Application.Static
 import qualified Network.Wai.Handler.Warp as Warp
 import Network.WebSockets
-#endif
--- end jsaddle import
-import Control.Monad.IO.Class
 
-import Data.Aeson
-import qualified Data.Map as M
-import Debug.Trace
-
-data Hero =
-  Hero
-    { name :: String
-    , health :: Integer
-    , focusAmount :: Integer
-    , slashing :: Bool
-    , dead :: Bool
-    }
-  deriving (Show, Eq)
-
--- | Type synonym for an application model
-data Model =
-  Model
-    { player :: Hero
-    , enemy :: Hero
-    , battleFinished :: Bool
-    , playerTurn :: Bool
-    }
-  deriving (Show, Eq)
-
-data HeroType
-  = Player
-  | Enemy
-  deriving (Show, Eq)
-
--- | Sum type for application events
-data Action
-  = NoOp
-  | Print String
-  | AbilityBtn1Pressed HeroType
-  | SlashEnd HeroType
-  | Restart
-  deriving (Show, Eq)
--- | jsaddle runApp
-#ifndef __GHCJS__
 runApp :: JSM () -> IO ()
 runApp f =
   Warp.runSettings
@@ -74,11 +40,51 @@ runApp f =
         ("assets":_) -> staticApp (defaultWebAppSettings ".") req sendResp
         _ -> JSaddle.jsaddleApp req sendResp
 #else
--- | ghcjs runApp
+-- ghcjs for deployment
 runApp :: IO () -> IO ()
 runApp app = app
 #endif
--- | initial model values at startup
+data Hero =
+  Hero
+    { name :: String
+    , health :: Integer
+    , focusAmount :: Integer
+    , slashing :: Bool
+    , dead :: Bool
+    }
+  deriving (Show, Eq)
+
+data Ability =
+  Ability
+    { abilityName :: String
+    , action :: HeroType -> HeroType -> Model -> Model
+    }
+
+data Model =
+  Model
+    { player :: Hero
+    , enemy :: Hero
+    , battleFinished :: Bool
+    , isPlayerTurn :: Bool
+    }
+  deriving (Show, Eq)
+
+newtype GuiEvent =
+  SlashEndEvent HeroType
+
+data HeroType
+  = Player
+  | Enemy
+  deriving (Show, Eq)
+
+data Action
+  = NoOp
+  | Print String
+  | AbilityBtnPressed Integer
+  | SlashEnd HeroType
+  | Restart
+  deriving (Show, Eq)
+
 initialModel :: Model
 initialModel =
   Model
@@ -99,81 +105,131 @@ initialModel =
           , dead = False
           }
     , battleFinished = False
-    , playerTurn = True
+    , isPlayerTurn = True
     }
 
--- | Entry point for a miso application
 main :: IO ()
 main = runApp $ startApp App {..}
   where
-    initialAction = NoOp -- initial action to be executed on application load
-    model = initialModel -- initial model
-    update = updateModel -- update function
-    view = viewModel -- view function
+    initialAction = NoOp
+    model = initialModel
+    update = updateModel
+    view = viewModel
     events =
-      M.insert "transitionend" True $
-      M.insert "animationend" True defaultEvents -- default delegated events
-    subs = [] -- empty subscription list
-    mountPoint = Nothing -- mount point for application (Nothing defaults to 'body')
-    logLevel = Off -- used during prerendering to see if the VDOM and DOM are in synch (only used with `miso` function)
+      defaultEvents & M.insert "transitionend" True &
+      M.insert "animationend" True
+    subs = []
+    mountPoint = Nothing -- mount on body
+    logLevel = Off -- miso internal
 
--- | Updates model, optionally introduces side effects
+-- Updates model, optionally introduces side effects
 updateModel :: Action -> Model -> Effect Action Model
 updateModel NoOp m = noEff m
 updateModel (Print t) m = m <# do liftIO (putStrLn t) >> pure NoOp
-updateModel (AbilityBtn1Pressed ht) m =
-  noEff $
-  handleAnimation (AbilityBtn1Pressed ht) $
-  handleFocusCost (AbilityBtn1Pressed ht) $ handleDamage (AbilityBtn1Pressed ht) $ m {playerTurn = False}
+updateModel (AbilityBtnPressed n) m = m & playerTurn n & enemyTurn & noEff
 updateModel (SlashEnd ht) m =
-  noEff $
-  checkIfBattleFinished $
-  handleAnimation
-    (SlashEnd ht)
-    (case ht of
-       Enemy -> m {playerTurn = True}
-       Player -> m)
-updateModel Restart _ = noEff initialModel
+  m & handleGuiEventAnimation (SlashEndEvent ht) & noEff
+updateModel Restart _ = initialModel & noEff
 
-handleAnimation :: Action -> Model -> Model
-handleAnimation (AbilityBtn1Pressed herotype) m =
-  traceShowId $
+playerTurn :: Integer -> Model -> Model
+playerTurn abilityNum m =
+  let ability =
+        case abilityNum of
+          0 -> slash
+          1 -> hack
+          _ -> Ability {abilityName = "", action = \_ _ m' -> m'}
+   in if m & player & dead
+        then m
+        else action ability Player Enemy m &
+             handleAbilityAnimation (abilityName ability) Player
+
+enemyTurn :: Model -> Model
+enemyTurn m =
+  let ability = slash
+   in if m & enemy & dead
+        then m
+        else action ability Enemy Player m &
+             handleAbilityAnimation (abilityName ability) Enemy
+
+handleAbilityAnimation :: String -> HeroType -> Model -> Model
+handleAbilityAnimation name ht m =
+  case ht of
+    Player ->
+      case name of
+        "slash" -> m {player = (player m) {slashing = True}}
+        "hack" -> m {enemy = (enemy m) {slashing = True}}
+        _ -> m
+    Enemy ->
+      case name of
+        "slash" -> m {player = (player m) {slashing = True}}
+        "hack" -> m {enemy = (enemy m) {slashing = True}}
+        _ -> m
+
+handleGuiEventAnimation :: GuiEvent -> Model -> Model
+handleGuiEventAnimation (SlashEndEvent Player) m =
+  m {player = (player m) {slashing = False}}
+handleGuiEventAnimation (SlashEndEvent Enemy) m =
+  m {enemy = (enemy m) {slashing = False}}
+
+slash :: Ability
+slash =
+  Ability
+    { abilityName = "slash"
+    , action =
+        \_ target m ->
+          let damage = 100
+           in applyDamage damage target m
+    }
+
+hack :: Ability
+hack =
+  Ability
+    { abilityName = "hack"
+    , action =
+        \_ target m ->
+          let damage = 150
+           in applyDamage damage target m
+    }
+
+applyDamage :: Integer -> HeroType -> Model -> Model
+applyDamage damage herotype m =
   case herotype of
-    Player -> m {player = (player m) {slashing = True}}
-    Enemy -> m {enemy = (enemy m) {slashing = True}}
-handleAnimation (SlashEnd herotype) m =
-  traceShowId $
-  case herotype of
-    Player -> handleEnemyTurn $ m {player = (player m) {slashing = False}}
-    Enemy -> m {enemy = (enemy m) {slashing = False}}
-handleAnimation _ m = m
+    Player -> m {player = adjustHealth (player m) (-damage)}
+    Enemy -> m {enemy = adjustHealth (enemy m) (-damage)}
 
-handleDamage :: Action -> Model -> Model
-handleDamage (AbilityBtn1Pressed herotype) m =
-  case herotype of
-    Player -> m {enemy = applyDamage (enemy m) 200}
-    Enemy -> m {player = applyDamage (player m) 150}
-handleDamage _ m = m
+-- updateModel (SlashEnd ht) m =
+--   noEff $
+--   determineIfBattleFinished $
+--   handleAnimation
+--     (SlashEnd ht)
+--     (case ht of
+--        Enemy -> m {isPlayerTurn = True}
+--        Player -> m)
+-- handleAnimation :: Action -> Model -> Model
+-- handleAnimation (AbilityBtnPressed herotype) m =
+--   traceShowId $
+--   case herotype of
+--     Player -> m {player = (player m) {slashing = True}}
+--     Enemy -> m {enemy = (enemy m) {slashing = True}}
+-- handleAnimation (SlashEnd herotype) m =
+--   traceShowId $
+--   case herotype of
+--     Player -> enemyTurn $ m {player = (player m) {slashing = False}}
+--     Enemy -> m {enemy = (enemy m) {slashing = False}}
+-- handleAnimation _ m = m
+-- handleDamage _ m = m
+-- handleFocusCost :: Action -> Model -> Model
+-- handleFocusCost (AbilityBtnPressed herotype) m =
+--   case herotype of
+--     Player -> m {player = subtractFocus (player m) 20}
+--     Enemy -> m {enemy = subtractFocus (enemy m) 10}
+-- handleFocusCost _ m = m
+adjustHealth :: Hero -> Integer -> Hero
+adjustHealth hero value =
+  hero {health = health hero + value} & determineIfHeroKilled
 
-handleFocusCost :: Action -> Model -> Model
-handleFocusCost (AbilityBtn1Pressed herotype) m =
-  case herotype of
-    Player -> m {player = subtractFocus (player m) 20}
-    Enemy -> m {enemy = subtractFocus (enemy m) 10}
-handleFocusCost _ m = m
-
-handleEnemyTurn :: Model -> Model
-handleEnemyTurn m =
-  if dead $ enemy m
-    then m
-    else handleFocusCost (AbilityBtn1Pressed Enemy) $
-         handleAnimation (AbilityBtn1Pressed Enemy) $ handleDamage (AbilityBtn1Pressed Enemy) m
-
-applyDamage :: Hero -> Integer -> Hero
-applyDamage hero damage = checkIfDead $ hero {health = health hero - damage}
-
-checkIfDead :: Hero -> Hero
-checkIfDead hero =
+determineIfHeroKilled :: Hero -> Hero
+determineIfHeroKilled hero =
   if health hero <= 0
     then hero {dead = True, health = 0}
     else hero
@@ -181,30 +237,30 @@ checkIfDead hero =
 subtractFocus :: Hero -> Integer -> Hero
 subtractFocus hero cost = hero {focusAmount = focusAmount hero - cost}
 
-checkIfBattleFinished :: Model -> Model
-checkIfBattleFinished m =
+determineIfBattleFinished :: Model -> Model
+determineIfBattleFinished m =
   if dead (player m) || dead (enemy m)
     then m {battleFinished = True}
     else m
 
-animationNameDecoder :: Decoder Value
+animationNameDecoder :: Decoder Aeson.Value
 animationNameDecoder =
   Decoder
     { decodeAt = DecodeTarget mempty
-    , decoder = withObject "event" $ \o -> o .: "animationName"
+    , decoder = Aeson.withObject "event" $ \o -> o .: "animationName"
     }
 
 animationEndHandler :: HeroType -> Attribute Action
 animationEndHandler herotype =
-  on "animationend" animationNameDecoder $ \case
-    String name ->
+  Miso.on "animationend" animationNameDecoder $ \case
+    Aeson.String name ->
       case name of
         "left-slash" -> SlashEnd herotype
         "right-slash" -> SlashEnd herotype
         _ -> NoOp
     _ -> error "Unexpected case"
 
--- | Constructs a virtual DOM from a model
+-- Constructs a virtual DOM from a model
 viewModel :: Model -> View Action
 viewModel m =
   div_
@@ -316,15 +372,15 @@ viewModel m =
         [ div_
             [ classList_
                 [ ("ability-button", True)
-                , ("enabled", playerTurn m || battleFinished m)
+                , ("enabled", isPlayerTurn m || battleFinished m)
                 ]
             ]
             [ p_
                 [ onClick $
                   if battleFinished m
                     then Restart
-                    else if playerTurn m
-                           then AbilityBtn1Pressed Player
+                    else if isPlayerTurn m
+                           then AbilityBtnPressed 0 -- TEMP!! enemy
                            else NoOp
                 ]
                 [ text $
@@ -336,15 +392,15 @@ viewModel m =
         , div_
             [ classList_
                 [ ("ability-button", True)
-                , ("enabled", playerTurn m || battleFinished m)
+                , ("enabled", isPlayerTurn m || battleFinished m)
                 ]
             ]
             [ p_
                 [ onClick $
                   if battleFinished m
                     then Restart
-                    else if playerTurn m
-                           then AbilityBtn1Pressed Player
+                    else if isPlayerTurn m
+                           then AbilityBtnPressed 0
                            else NoOp
                 ]
                 [ text $
