@@ -57,7 +57,7 @@ data HeroType
 data Action
   = NoOp
   | Print String
-  | Slash HeroType
+  | AbilityBtn1Pressed HeroType
   | SlashEnd HeroType
   | Restart
   deriving (Show, Eq)
@@ -121,10 +121,10 @@ main = runApp $ startApp App {..}
 updateModel :: Action -> Model -> Effect Action Model
 updateModel NoOp m = noEff m
 updateModel (Print t) m = m <# do liftIO (putStrLn t) >> pure NoOp
-updateModel (Slash ht) m =
+updateModel (AbilityBtn1Pressed ht) m =
   noEff $
-  handleAnimation (Slash ht) $
-  handleFocusCost (Slash ht) $ handleDamage (Slash ht) $ m {playerTurn = False}
+  handleAnimation (AbilityBtn1Pressed ht) $
+  handleFocusCost (AbilityBtn1Pressed ht) $ handleDamage (AbilityBtn1Pressed ht) $ m {playerTurn = False}
 updateModel (SlashEnd ht) m =
   noEff $
   checkIfBattleFinished $
@@ -136,7 +136,7 @@ updateModel (SlashEnd ht) m =
 updateModel Restart _ = noEff initialModel
 
 handleAnimation :: Action -> Model -> Model
-handleAnimation (Slash herotype) m =
+handleAnimation (AbilityBtn1Pressed herotype) m =
   traceShowId $
   case herotype of
     Player -> m {player = (player m) {slashing = True}}
@@ -149,14 +149,14 @@ handleAnimation (SlashEnd herotype) m =
 handleAnimation _ m = m
 
 handleDamage :: Action -> Model -> Model
-handleDamage (Slash herotype) m =
+handleDamage (AbilityBtn1Pressed herotype) m =
   case herotype of
     Player -> m {enemy = applyDamage (enemy m) 200}
     Enemy -> m {player = applyDamage (player m) 150}
 handleDamage _ m = m
 
 handleFocusCost :: Action -> Model -> Model
-handleFocusCost (Slash herotype) m =
+handleFocusCost (AbilityBtn1Pressed herotype) m =
   case herotype of
     Player -> m {player = subtractFocus (player m) 20}
     Enemy -> m {enemy = subtractFocus (enemy m) 10}
@@ -166,8 +166,8 @@ handleEnemyTurn :: Model -> Model
 handleEnemyTurn m =
   if dead $ enemy m
     then m
-    else handleFocusCost (Slash Enemy) $
-         handleAnimation (Slash Enemy) $ handleDamage (Slash Enemy) m
+    else handleFocusCost (AbilityBtn1Pressed Enemy) $
+         handleAnimation (AbilityBtn1Pressed Enemy) $ handleDamage (AbilityBtn1Pressed Enemy) m
 
 applyDamage :: Hero -> Integer -> Hero
 applyDamage hero damage = checkIfDead $ hero {health = health hero - damage}
@@ -324,7 +324,7 @@ viewModel m =
                   if battleFinished m
                     then Restart
                     else if playerTurn m
-                           then Slash Player
+                           then AbilityBtn1Pressed Player
                            else NoOp
                 ]
                 [ text $
@@ -344,7 +344,7 @@ viewModel m =
                   if battleFinished m
                     then Restart
                     else if playerTurn m
-                           then Slash Player
+                           then AbilityBtn1Pressed Player
                            else NoOp
                 ]
                 [ text $
