@@ -1,0 +1,36 @@
+@use 'heroes'
+
+$padding: 5px
+
+:root
+  --focus-bar-container-width: 200px
+  --focus-bar-width: calc(var(--focus-bar-container-width) - 2 * #{$padding})
+
+.focus-bar-container
+  margin-bottom: 20px
+  box-sizing: border-box
+  height: 20px
+  width: var(--focus-bar-container-width)
+  padding: $padding
+  background: #ddd
+  border-radius: 5px
+  position: relative
+
+.focus-bar
+  height: 10px
+  position: absolute
+  transition: width 0.25s, background-color 2s
+  background-color: #3399ff
+
+  &.enemy
+    right: $padding
+
+.focus-amount
+  position: absolute
+  top: 4px
+  z-index: 1
+  font-size: 8px
+  &.player
+    right: 10px
+  &.enemy
+    left: 10px
