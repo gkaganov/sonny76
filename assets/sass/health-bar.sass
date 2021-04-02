@@ -17,11 +17,17 @@ $padding: 5px
   position: relative
 
 .health-bar
-  background: #c54
   height: 10px
   position: absolute
-  transition: width 0.5s
-  transition-delay: heroes.$slash-hit-timing
+  transition: width 0.5s heroes.$slash-hit-timing, background-color 2s
+
+  &.full
+    background-color: #33cc33
+  &.medium
+    background-color: #ff9900
+  &.low
+    background-color: #cc0000
+
   &.enemy
     right: $padding
 

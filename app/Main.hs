@@ -1,3 +1,5 @@
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -202,7 +204,9 @@ viewModel m =
                     [text $ ms $ show $ health $ player m]
                 , div_
                     [ class_ "health-bar player"
-                    , style_ $ M.fromList [("width", healthBarWidth m Player)]
+                    , classList_ [calculateHealthBarColorLabel $ player m]
+                    , style_ $
+                      M.fromList [("width", buildHealthBarWidth m Player)]
                     ]
                     []
                 ]
@@ -228,7 +232,9 @@ viewModel m =
                     [text $ ms $ show $ health $ enemy m]
                 , div_
                     [ class_ "health-bar enemy"
-                    , style_ $ M.fromList [("width", healthBarWidth m Enemy)]
+                    , classList_ [calculateHealthBarColorLabel $ enemy m]
+                    , style_ $
+                      M.fromList [("width", buildHealthBarWidth m Enemy)]
                     ]
                     []
                 ]
@@ -244,10 +250,8 @@ viewModel m =
             ]
         ]
     , div_
-        [ classList_
-            [ ("ability-button", True)
-            , ("enabled", playerTurn m || battleFinished m)
-            ]
+        [ class_ "ability-button"
+        , classList_ [("enabled", playerTurn m || battleFinished m)]
         ]
         [ p_
             [ onClick $
@@ -265,8 +269,8 @@ viewModel m =
         ]
     ]
 
-healthBarWidth :: Model -> HeroType -> MisoString
-healthBarWidth m herotype =
+buildHealthBarWidth :: Model -> HeroType -> MisoString
+buildHealthBarWidth m herotype =
   ms
     ("calc(" ++
      "var(--health-bar-width) * " ++
@@ -277,3 +281,9 @@ healthBarWidth m herotype =
           Player -> player m
           Enemy -> enemy m) ++
      "/" ++ show 1000 ++ "))")
+
+calculateHealthBarColorLabel :: Hero -> (MisoString, Bool)
+calculateHealthBarColorLabel hero =
+  if | health hero > 500 -> ("full", True)
+     | health hero > 250 -> ("medium", True)
+     | otherwise -> ("low", True)
