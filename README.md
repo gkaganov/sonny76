@@ -28,4 +28,4 @@ firefox localhost:8080
 nix-build
 
 ## deploy
-nix-build && ./deploy
+./deploy

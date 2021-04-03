@@ -1,1 +1,1 @@
-rsync -avz ./result/bin/sonny76-exe.jsexe/ root@1911.to:/var/www/sonny76/
+nix-build && rsync -avz ./result/bin/sonny76-exe.jsexe/ root@1911.to:/var/www/sonny76/
