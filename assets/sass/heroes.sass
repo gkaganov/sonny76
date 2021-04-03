@@ -4,11 +4,18 @@ $slash-frametime: $slash-duration / $slash-steps
 $slash-steps-until-hit: 2
 $slash-hit-timing: $slash-frametime * $slash-steps-until-hit
 
+$hack-duration: 0.75s
+$hack-steps: 6
+
 .slashing.player
   animation: left-slash $slash-duration steps($slash-steps)
-
 .slashing.enemy
   animation: right-slash $slash-duration steps($slash-steps)
+
+.hacking.player
+  animation: left-hack $hack-duration steps($hack-steps)
+.hacking.enemy
+  animation: right-hack $hack-duration steps($hack-steps)
 
 .idling
   animation: idle 2s infinite steps(3)

@@ -50,6 +50,7 @@ data Hero =
     , health :: Integer
     , focusAmount :: Integer
     , slashing :: Bool
+    , hacking :: Bool
     , dead :: Bool
     }
   deriving (Show, Eq)
@@ -65,12 +66,12 @@ data Model =
     { player :: Hero
     , enemy :: Hero
     , battleFinished :: Bool
-    , isPlayerTurn :: Bool
+    , playerActive :: Bool
     }
   deriving (Show, Eq)
 
 newtype GuiEvent =
-  SlashEndEvent HeroType
+  AttackAnimationEndEvent HeroType
 
 data HeroType
   = Player
@@ -81,7 +82,7 @@ data Action
   = NoOp
   | Print String
   | AbilityBtnPressed Integer
-  | SlashEnd HeroType
+  | AttackAnimationEnd HeroType
   | Restart
   deriving (Show, Eq)
 
@@ -94,6 +95,7 @@ initialModel =
           , health = 1000
           , focusAmount = 100
           , slashing = False
+          , hacking = False
           , dead = False
           }
     , enemy =
@@ -102,10 +104,11 @@ initialModel =
           , health = 1000
           , focusAmount = 100
           , slashing = False
+          , hacking = False
           , dead = False
           }
     , battleFinished = False
-    , isPlayerTurn = True
+    , playerActive = True
     }
 
 main :: IO ()
@@ -126,9 +129,14 @@ main = runApp $ startApp App {..}
 updateModel :: Action -> Model -> Effect Action Model
 updateModel NoOp m = noEff m
 updateModel (Print t) m = m <# do liftIO (putStrLn t) >> pure NoOp
-updateModel (AbilityBtnPressed n) m = m & playerTurn n & enemyTurn & noEff
-updateModel (SlashEnd ht) m =
-  m & handleGuiEventAnimation (SlashEndEvent ht) & noEff
+updateModel (AbilityBtnPressed n) m = m & playerTurn n & noEff
+updateModel (AttackAnimationEnd ht) m =
+  m & handleGuiEventAnimation (AttackAnimationEndEvent ht) &
+  (case ht of
+     Player -> enemyTurn
+     Enemy -> \m' -> m' {playerActive = True}) &
+  determineIfBattleFinished &
+  noEff
 updateModel Restart _ = initialModel & noEff
 
 playerTurn :: Integer -> Model -> Model
@@ -141,7 +149,8 @@ playerTurn abilityNum m =
    in if m & player & dead
         then m
         else action ability Player Enemy m &
-             handleAbilityAnimation (abilityName ability) Player
+             handleAbilityAnimation (abilityName ability) Player & \m' ->
+               m' {playerActive = False}
 
 enemyTurn :: Model -> Model
 enemyTurn m =
@@ -157,19 +166,19 @@ handleAbilityAnimation name ht m =
     Player ->
       case name of
         "slash" -> m {player = (player m) {slashing = True}}
-        "hack" -> m {enemy = (enemy m) {slashing = True}}
+        "hack" -> m {player = (player m) {hacking = True}}
         _ -> m
     Enemy ->
       case name of
-        "slash" -> m {player = (player m) {slashing = True}}
-        "hack" -> m {enemy = (enemy m) {slashing = True}}
+        "slash" -> m {enemy = (enemy m) {slashing = True}}
+        "hack" -> m {enemy = (enemy m) {hacking = True}}
         _ -> m
 
 handleGuiEventAnimation :: GuiEvent -> Model -> Model
-handleGuiEventAnimation (SlashEndEvent Player) m =
-  m {player = (player m) {slashing = False}}
-handleGuiEventAnimation (SlashEndEvent Enemy) m =
-  m {enemy = (enemy m) {slashing = False}}
+handleGuiEventAnimation (AttackAnimationEndEvent Player) m =
+  m {player = (player m) {slashing = False, hacking = False}}
+handleGuiEventAnimation (AttackAnimationEndEvent Enemy) m =
+  m {enemy = (enemy m) {slashing = False, hacking = False}}
 
 slash :: Ability
 slash =
@@ -186,44 +195,24 @@ hack =
   Ability
     { abilityName = "hack"
     , action =
-        \_ target m ->
-          let damage = 150
-           in applyDamage damage target m
+        \caster target m ->
+          let damage = 350
+              focusCost = 40
+           in m & handleFocusCost focusCost caster & applyDamage damage target
     }
 
 applyDamage :: Integer -> HeroType -> Model -> Model
-applyDamage damage herotype m =
-  case herotype of
+applyDamage damage target m =
+  case target of
     Player -> m {player = adjustHealth (player m) (-damage)}
     Enemy -> m {enemy = adjustHealth (enemy m) (-damage)}
 
--- updateModel (SlashEnd ht) m =
---   noEff $
---   determineIfBattleFinished $
---   handleAnimation
---     (SlashEnd ht)
---     (case ht of
---        Enemy -> m {isPlayerTurn = True}
---        Player -> m)
--- handleAnimation :: Action -> Model -> Model
--- handleAnimation (AbilityBtnPressed herotype) m =
---   traceShowId $
---   case herotype of
---     Player -> m {player = (player m) {slashing = True}}
---     Enemy -> m {enemy = (enemy m) {slashing = True}}
--- handleAnimation (SlashEnd herotype) m =
---   traceShowId $
---   case herotype of
---     Player -> enemyTurn $ m {player = (player m) {slashing = False}}
---     Enemy -> m {enemy = (enemy m) {slashing = False}}
--- handleAnimation _ m = m
--- handleDamage _ m = m
--- handleFocusCost :: Action -> Model -> Model
--- handleFocusCost (AbilityBtnPressed herotype) m =
---   case herotype of
---     Player -> m {player = subtractFocus (player m) 20}
---     Enemy -> m {enemy = subtractFocus (enemy m) 10}
--- handleFocusCost _ m = m
+handleFocusCost :: Integer -> HeroType -> Model -> Model
+handleFocusCost cost target m =
+  case target of
+    Player -> m {player = subtractFocus (player m) cost}
+    Enemy -> m {enemy = subtractFocus (enemy m) cost}
+
 adjustHealth :: Hero -> Integer -> Hero
 adjustHealth hero value =
   hero {health = health hero + value} & determineIfHeroKilled
@@ -255,8 +244,10 @@ animationEndHandler herotype =
   Miso.on "animationend" animationNameDecoder $ \case
     Aeson.String name ->
       case name of
-        "left-slash" -> SlashEnd herotype
-        "right-slash" -> SlashEnd herotype
+        "left-slash" -> AttackAnimationEnd herotype
+        "right-slash" -> AttackAnimationEnd herotype
+        "left-hack" -> AttackAnimationEnd herotype
+        "right-hack" -> AttackAnimationEnd herotype
         _ -> NoOp
     _ -> error "Unexpected case"
 
@@ -312,10 +303,12 @@ viewModel m =
                     []
                 ]
             , div_
-                [ class_
-                    (if slashing $ player m
-                       then "slashing hero player"
-                       else "idling hero player")
+                [ classList_
+                    [ ("hero player", True)
+                    , if | slashing $ player m -> ("slashing", True)
+                         | hacking $ player m -> ("hacking", True)
+                         | otherwise -> ("idling", True)
+                    ]
                 , animationEndHandler Player
                 ]
                 []
@@ -372,15 +365,15 @@ viewModel m =
         [ div_
             [ classList_
                 [ ("ability-button", True)
-                , ("enabled", isPlayerTurn m || battleFinished m)
+                , ("enabled", playerActive m || battleFinished m)
                 ]
             ]
             [ p_
                 [ onClick $
                   if battleFinished m
                     then Restart
-                    else if isPlayerTurn m
-                           then AbilityBtnPressed 0 -- TEMP!! enemy
+                    else if playerActive m
+                           then AbilityBtnPressed 0
                            else NoOp
                 ]
                 [ text $
@@ -392,15 +385,17 @@ viewModel m =
         , div_
             [ classList_
                 [ ("ability-button", True)
-                , ("enabled", isPlayerTurn m || battleFinished m)
+                , ( "enabled"
+                  , (playerActive m && focusAmount (player m) >= 40) ||
+                    battleFinished m)
                 ]
             ]
             [ p_
                 [ onClick $
                   if battleFinished m
                     then Restart
-                    else if isPlayerTurn m
-                           then AbilityBtnPressed 0
+                    else if playerActive m && focusAmount (player m) >= 40
+                           then AbilityBtnPressed 1
                            else NoOp
                 ]
                 [ text $
