@@ -11,6 +11,9 @@ module Main
   ( main
   ) where
 
+import Abilities
+import Types
+
 import Miso
 import Miso.String
 
@@ -44,39 +47,11 @@ runApp f =
 runApp :: IO () -> IO ()
 runApp app = app
 #endif
-data Hero =
-  Hero
-    { name :: String
-    , health :: Integer
-    , focusAmount :: Integer
-    , slashing :: Bool
-    , hacking :: Bool
-    , dead :: Bool
-    }
-  deriving (Show, Eq)
 
-data Ability =
-  Ability
-    { abilityName :: String
-    , action :: HeroType -> HeroType -> Model -> Model
-    }
-
-data Model =
-  Model
-    { player :: Hero
-    , enemy :: Hero
-    , battleFinished :: Bool
-    , playerActive :: Bool
-    }
-  deriving (Show, Eq)
 
 newtype GuiEvent =
   AttackAnimationEndEvent HeroType
 
-data HeroType
-  = Player
-  | Enemy
-  deriving (Show, Eq)
 
 data Action
   = NoOp
@@ -179,52 +154,6 @@ handleGuiEventAnimation (AttackAnimationEndEvent Player) m =
   m {player = (player m) {slashing = False, hacking = False}}
 handleGuiEventAnimation (AttackAnimationEndEvent Enemy) m =
   m {enemy = (enemy m) {slashing = False, hacking = False}}
-
-slash :: Ability
-slash =
-  Ability
-    { abilityName = "slash"
-    , action =
-        \_ target m ->
-          let damage = 100
-           in applyDamage damage target m
-    }
-
-hack :: Ability
-hack =
-  Ability
-    { abilityName = "hack"
-    , action =
-        \caster target m ->
-          let damage = 350
-              focusCost = 40
-           in m & handleFocusCost focusCost caster & applyDamage damage target
-    }
-
-applyDamage :: Integer -> HeroType -> Model -> Model
-applyDamage damage target m =
-  case target of
-    Player -> m {player = adjustHealth (player m) (-damage)}
-    Enemy -> m {enemy = adjustHealth (enemy m) (-damage)}
-
-handleFocusCost :: Integer -> HeroType -> Model -> Model
-handleFocusCost cost target m =
-  case target of
-    Player -> m {player = subtractFocus (player m) cost}
-    Enemy -> m {enemy = subtractFocus (enemy m) cost}
-
-adjustHealth :: Hero -> Integer -> Hero
-adjustHealth hero value =
-  hero {health = health hero + value} & determineIfHeroKilled
-
-determineIfHeroKilled :: Hero -> Hero
-determineIfHeroKilled hero =
-  if health hero <= 0
-    then hero {dead = True, health = 0}
-    else hero
-
-subtractFocus :: Hero -> Integer -> Hero
-subtractFocus hero cost = hero {focusAmount = focusAmount hero - cost}
 
 determineIfBattleFinished :: Model -> Model
 determineIfBattleFinished m =

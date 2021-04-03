@@ -1,13 +1,4 @@
 cradle:
   stack:
-    - path: "./src"
-      component: "sonny76:lib"
-
-    - path: "./app/Main.hs"
-      component: "sonny76:exe:sonny76-exe"
-
-    - path: "./app/Paths_sonny76.hs"
-      component: "sonny76:exe:sonny76-exe"
-
-    - path: "./test"
-      component: "sonny76:test:sonny76-test"
+    - path: "./app"
+      component: "sonny76:exe:sonny76"

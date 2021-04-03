@@ -19,7 +19,7 @@ source-repository head
   type: git
   location: https://github.com/githubuser/sonny76
 
-executable sonny76-exe
+executable sonny76
   main-is: Main.hs
   other-modules:
       Paths_sonny76

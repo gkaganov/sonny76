@@ -7,7 +7,7 @@ let
 in {
   release = release.overrideAttrs (old: {
     postInstall = ''
-      cp -r ${old.src}/assets $out/bin/sonny76-exe.jsexe/assets
+      cp -r ${old.src}/assets $out/bin/sonny76.jsexe/assets
     '';
   });
   inherit pkgs;
