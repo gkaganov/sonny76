@@ -12,10 +12,10 @@ module Main
   ) where
 
 import Abilities
-import Types
+import Model
 
 import Miso
-import Miso.String
+import Miso.String (MisoString, ms)
 
 import Control.Monad.IO.Class
 
@@ -47,11 +47,8 @@ runApp f =
 runApp :: IO () -> IO ()
 runApp app = app
 #endif
-
-
 newtype GuiEvent =
   AttackAnimationEndEvent HeroType
-
 
 data Action
   = NoOp
@@ -118,36 +115,33 @@ playerTurn :: Integer -> Model -> Model
 playerTurn abilityNum m =
   let ability =
         case abilityNum of
-          0 -> slash
-          1 -> hack
-          _ -> Ability {abilityName = "", action = \_ _ m' -> m'}
+          0 -> Slash
+          1 -> Hack
+          n -> error $ "there is no ability defined for slot " ++ show n
    in if m & player & dead
         then m
-        else action ability Player Enemy m &
-             handleAbilityAnimation (abilityName ability) Player & \m' ->
-               m' {playerActive = False}
+        else m {playerActive = False} & cast ability Player Enemy &
+             handleAbilityAnimation ability Player
 
 enemyTurn :: Model -> Model
 enemyTurn m =
-  let ability = slash
+  let ability = Slash
    in if m & enemy & dead
         then m
-        else action ability Enemy Player m &
-             handleAbilityAnimation (abilityName ability) Enemy
+        else cast ability Enemy Player m &
+             handleAbilityAnimation ability Enemy
 
-handleAbilityAnimation :: String -> HeroType -> Model -> Model
+handleAbilityAnimation :: Ability -> HeroType -> Model -> Model
 handleAbilityAnimation name ht m =
   case ht of
     Player ->
       case name of
-        "slash" -> m {player = (player m) {slashing = True}}
-        "hack" -> m {player = (player m) {hacking = True}}
-        _ -> m
+        Slash -> m {player = (player m) {slashing = True}}
+        Hack -> m {player = (player m) {hacking = True}}
     Enemy ->
       case name of
-        "slash" -> m {enemy = (enemy m) {slashing = True}}
-        "hack" -> m {enemy = (enemy m) {hacking = True}}
-        _ -> m
+        Slash -> m {enemy = (enemy m) {slashing = True}}
+        Hack -> m {enemy = (enemy m) {hacking = True}}
 
 handleGuiEventAnimation :: GuiEvent -> Model -> Model
 handleGuiEventAnimation (AttackAnimationEndEvent Player) m =
@@ -315,7 +309,8 @@ viewModel m =
             [ classList_
                 [ ("ability-button", True)
                 , ( "enabled"
-                  , (playerActive m && focusAmount (player m) >= 40) ||
+                  , (playerActive m &&
+                     canCast Hack m Player) ||
                     battleFinished m)
                 ]
             ]

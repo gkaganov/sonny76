@@ -1,44 +1,52 @@
 module Abilities
   ( Ability(..)
-  , slash
-  , hack
+  , canCast
+  , cast
   ) where
 
 import Data.Function
-import Types
+import Model
 
-data Ability =
-  Ability
-    { abilityName :: String
-    , action :: HeroType -> HeroType -> Model -> Model
-    }
+focusCost :: Ability -> Integer
+focusCost Slash = 0
+focusCost Hack = 40
 
-slash :: Ability
-slash =
-  Ability
-    { abilityName = "slash"
-    , action =
-        \_ target m ->
-          let damage = 100
-           in applyDamage damage target m
-    }
+data Ability
+  = Slash
+  | Hack
+  deriving (Eq)
 
-hack :: Ability
-hack =
-  Ability
-    { abilityName = "hack"
-    , action =
-        \caster target m ->
-          let damage = 350
-              focusCost = 40
-           in m & applyFocusCost focusCost caster & applyDamage damage target
-    }
+instance Show Ability where
+  show Slash = "slash"
+  show Hack = "hack"
+
+cast :: Ability -> HeroType -> HeroType -> Model -> Model
+cast Slash _ target m =
+  let damage = 150
+   in m & applyDamage damage target
+cast Hack caster target m =
+  let damage = 350
+      fCost = focusCost Hack
+   in m & applyFocusCost fCost caster & applyDamage damage target
+
+canCast :: Ability -> Model -> HeroType -> Bool
+canCast Slash _ _ = True
+canCast Hack m h =
+  let fCost = focusCost Hack
+   in case h of
+        Player -> enoughFocus m Player Hack fCost
+        Enemy -> False
+
+enoughFocus :: Model -> HeroType -> Ability -> Integer -> Bool
+enoughFocus m _ _ reqFocus =
+  let currentFocus = m & player & focusAmount
+   in currentFocus >= reqFocus
 
 applyDamage :: Integer -> HeroType -> Model -> Model
-applyDamage damage target m =
+applyDamage damage' target m =
   case target of
-    Player -> m {player = adjustHealth (player m) (-damage)}
-    Enemy -> m {enemy = adjustHealth (enemy m) (-damage)}
+    Player -> m {player = adjustHealth (player m) (-damage')}
+    Enemy -> m {enemy = adjustHealth (enemy m) (-damage')}
 
 adjustHealth :: Hero -> Integer -> Hero
 adjustHealth hero value =
@@ -57,4 +65,4 @@ applyFocusCost cost target m =
     Enemy -> m {enemy = adjustFocus (enemy m) (-cost)}
 
 adjustFocus :: Hero -> Integer -> Hero
-adjustFocus hero cost = hero {focusAmount = focusAmount hero - cost}
+adjustFocus hero cost = hero {focusAmount = focusAmount hero + cost}

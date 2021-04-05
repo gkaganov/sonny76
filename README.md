@@ -19,7 +19,7 @@ cabal install hindent\
 *add cabal bin to PATH*
 
 ## hack
-./watch-sass\
+./sass-watch\
 ./build\
 ./run\
 firefox localhost:8080
