@@ -1,30 +1,46 @@
 module Model
-  ( HeroType(..)
+  ( Model(..)
   , Hero(..)
-  , Model(..)
+  , HeroID
+  , HeroAnimation
+  , BattleSide(..)
   ) where
+
+import Data.Sequence
 
 data Model =
   Model
-    { player :: Hero
-    , enemy :: Hero
+    { heroes :: Seq Hero
     , battleFinished :: Bool
-    , playerActive :: Bool
+    , humanActive :: Bool
     }
-  deriving (Show, Eq)
-
-data HeroType
-  = Player
-  | Enemy
   deriving (Show, Eq)
 
 data Hero =
   Hero
-    { name :: String
+    { heroID :: HeroID
+    , name :: String
+    , battleSide :: BattleSide
     , health :: Integer
     , focusAmount :: Integer
-    , slashing :: Bool
-    , hacking :: Bool
+    , currentAnimation :: HeroAnimation
     , dead :: Bool
     }
   deriving (Show, Eq)
+
+type HeroID = Integer
+
+data HeroAnimation
+  = Idling
+  | Slashing
+  | Hacking
+  deriving (Eq, Show)
+
+data BattleSide
+  = LeftSide
+  | RightSide
+  deriving (Eq)
+
+instance Show BattleSide where
+  show LeftSide = "left"
+  show RightSide = "right"

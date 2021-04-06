@@ -23,9 +23,9 @@ import Data.Function
 
 import Data.Aeson as Aeson -- json for event decoders
 import qualified Data.Map as M
+
 -- import Debug.Trace
 -- jsaddle for local dev
-#ifndef __GHCJS__
 import Language.Javascript.JSaddle.Warp as JSaddle
 import qualified Network.Wai as Wai
 import Network.Wai.Application.Static
@@ -42,45 +42,40 @@ runApp f =
       case Wai.pathInfo req of
         ("assets":_) -> staticApp (defaultWebAppSettings ".") req sendResp
         _ -> JSaddle.jsaddleApp req sendResp
-#else
--- ghcjs for deployment
-runApp :: IO () -> IO ()
-runApp app = app
-#endif
+
 newtype GuiEvent =
-  AttackAnimationEndEvent HeroType
+  AttackAnimationEndEvent HeroID
 
 data Action
   = NoOp
   | Print String
   | AbilityBtnPressed Integer
-  | AttackAnimationEnd HeroType
+  | AttackAnimationEnd HeroID
   | Restart
   deriving (Show, Eq)
 
 initialModel :: Model
 initialModel =
   Model
-    { player =
-        Hero
-          { name = "bro"
-          , health = 1000
-          , focusAmount = 100
-          , slashing = False
-          , hacking = False
-          , dead = False
-          }
-    , enemy =
-        Hero
-          { name = "the baddies"
-          , health = 1000
-          , focusAmount = 100
-          , slashing = False
-          , hacking = False
-          , dead = False
-          }
+    { heroes =
+        fromList
+          [ Hero
+              { name = "bro"
+              , health = 1000
+              , focusAmount = 100
+              , currentAnimation = Idling
+              , dead = False
+              }
+          , Hero
+              { name = "the baddies"
+              , health = 1000
+              , focusAmount = 100
+              , currentAnimation = Idling
+              , dead = False
+              }
+          ]
     , battleFinished = False
-    , playerActive = True
+    , humanActive = True
     }
 
 main :: IO ()
@@ -102,11 +97,11 @@ updateModel :: Action -> Model -> Effect Action Model
 updateModel NoOp m = noEff m
 updateModel (Print t) m = m <# do liftIO (putStrLn t) >> pure NoOp
 updateModel (AbilityBtnPressed n) m = m & playerTurn n & noEff
-updateModel (AttackAnimationEnd ht) m =
-  m & handleGuiEventAnimation (AttackAnimationEndEvent ht) &
-  (case ht of
-     Player -> enemyTurn
-     Enemy -> \m' -> m' {playerActive = True}) &
+updateModel (AttackAnimationEnd hID) m =
+  m & handleGuiEventAnimation (AttackAnimationEndEvent hID) &
+  (case findHero hID m & battleSide of
+     LeftSide -> enemyTurn
+     RightSide -> \m' -> m' {humanActive = True}) &
   determineIfBattleFinished &
   noEff
 updateModel Restart _ = initialModel & noEff
@@ -120,7 +115,7 @@ playerTurn abilityNum m =
           n -> error $ "there is no ability defined for slot " ++ show n
    in if m & player & dead
         then m
-        else m {playerActive = False} & cast ability Player Enemy &
+        else m {humanActive = False} & cast ability Player Enemy &
              handleAbilityAnimation ability Player
 
 enemyTurn :: Model -> Model
@@ -128,26 +123,15 @@ enemyTurn m =
   let ability = Slash
    in if m & enemy & dead
         then m
-        else cast ability Enemy Player m &
-             handleAbilityAnimation ability Enemy
+        else cast ability Enemy Player m & handleAbilityAnimation ability Enemy
 
-handleAbilityAnimation :: Ability -> HeroType -> Model -> Model
-handleAbilityAnimation name ht m =
-  case ht of
-    Player ->
-      case name of
-        Slash -> m {player = (player m) {slashing = True}}
-        Hack -> m {player = (player m) {hacking = True}}
-    Enemy ->
-      case name of
-        Slash -> m {enemy = (enemy m) {slashing = True}}
-        Hack -> m {enemy = (enemy m) {hacking = True}}
+handleAbilityAnimation :: Ability -> HeroID -> Model -> Model
+handleAbilityAnimation Slash hID m = setHeroAnimation hID Slashing
+handleAbilityAnimation Hack hID m = setHeroAnimation hID Hacking
 
 handleGuiEventAnimation :: GuiEvent -> Model -> Model
-handleGuiEventAnimation (AttackAnimationEndEvent Player) m =
-  m {player = (player m) {slashing = False, hacking = False}}
-handleGuiEventAnimation (AttackAnimationEndEvent Enemy) m =
-  m {enemy = (enemy m) {slashing = False, hacking = False}}
+handleGuiEventAnimation (AttackAnimationEndEvent hID) =
+  setHeroAnimation hID Idling
 
 determineIfBattleFinished :: Model -> Model
 determineIfBattleFinished m =
@@ -162,8 +146,8 @@ animationNameDecoder =
     , decoder = Aeson.withObject "event" $ \o -> o .: "animationName"
     }
 
-animationEndHandler :: HeroType -> Attribute Action
-animationEndHandler herotype =
+animationEndHandler :: HeroID -> Attribute Action
+animationEndHandler heroID =
   Miso.on "animationend" animationNameDecoder $ \case
     Aeson.String name ->
       case name of
@@ -288,14 +272,14 @@ viewModel m =
         [ div_
             [ classList_
                 [ ("ability-button", True)
-                , ("enabled", playerActive m || battleFinished m)
+                , ("enabled", humanActive m || battleFinished m)
                 ]
             ]
             [ p_
                 [ onClick $
                   if battleFinished m
                     then Restart
-                    else if playerActive m
+                    else if humanActive m
                            then AbilityBtnPressed 0
                            else NoOp
                 ]
@@ -309,16 +293,14 @@ viewModel m =
             [ classList_
                 [ ("ability-button", True)
                 , ( "enabled"
-                  , (playerActive m &&
-                     canCast Hack m Player) ||
-                    battleFinished m)
+                  , (humanActive m && canCast Hack m Player) || battleFinished m)
                 ]
             ]
             [ p_
                 [ onClick $
                   if battleFinished m
                     then Restart
-                    else if playerActive m && focusAmount (player m) >= 40
+                    else if humanActive m && focusAmount (player m) >= 40
                            then AbilityBtnPressed 1
                            else NoOp
                 ]
@@ -331,18 +313,12 @@ viewModel m =
         ]
     ]
 
-buildHealthBarWidth :: Model -> HeroType -> MisoString
-buildHealthBarWidth m herotype =
+buildHealthBarWidth :: Model -> HeroID -> MisoString
+buildHealthBarWidth m hID =
   ms
     ("calc(" ++
      "var(--health-bar-width) * " ++
-     "(" ++
-     show
-       (health $
-        case herotype of
-          Player -> player m
-          Enemy -> enemy m) ++
-     "/" ++ show 1000 ++ "))")
+     "(" ++ show (health $ findHero hID m Model) ++ "/" ++ show 1000 ++ "))")
 
 calculateHealthBarColorLabel :: Hero -> (MisoString, Bool)
 calculateHealthBarColorLabel hero =
@@ -350,15 +326,8 @@ calculateHealthBarColorLabel hero =
      | health hero > 250 -> ("medium", True)
      | otherwise -> ("low", True)
 
-buildFocusBarWidth :: Model -> HeroType -> MisoString
-buildFocusBarWidth m herotype =
+buildFocusBarWidth :: Model -> HeroID -> MisoString
+buildFocusBarWidth m hID =
   ms
-    ("calc(" ++
-     "var(--focus-bar-width) * " ++
-     "(" ++
-     show
-       (focusAmount $
-        case herotype of
-          Player -> player m
-          Enemy -> enemy m) ++
-     "/" ++ show 100 ++ "))")
+    ("calc(" ++ "var(--focus-bar-width) * " ++ "(" ++ show focusAmount $
+     findHero hID m ++ "/" ++ show 100 ++ "))")
