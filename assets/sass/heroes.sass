@@ -7,17 +7,17 @@ $slash-hit-timing: $slash-frametime * $slash-steps-until-hit
 $hack-duration: 0.75s
 $hack-steps: 6
 
-.slashing.player
+.Slashing.LeftSide
   animation: left-slash $slash-duration steps($slash-steps)
-.slashing.enemy
+.Slashing.RightSide
   animation: right-slash $slash-duration steps($slash-steps)
 
-.hacking.player
+.Hacking.LeftSide
   animation: left-hack $hack-duration steps($hack-steps)
-.hacking.enemy
+.Hacking.RightSide
   animation: right-hack $hack-duration steps($hack-steps)
 
-.idling
+.Idling
   animation: idle 2s infinite steps(3)
 
 .hero
@@ -25,6 +25,6 @@ $hack-steps: 6
   position: relative
   height: 117px
   width: 156px
-  &.enemy
+  &.RightSide
     transform: scaleX(-1)
     filter: invert(50%)

@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
-module Ability where
+module AbilityData where
 
 data Ability
   = Slash

@@ -2,11 +2,12 @@
 
 module Hero where
 
-import Ability
+import AbilityData
 import Model
 
 import Data.Foldable (find)
 import Data.Function ((&))
+
 import qualified Data.Sequence as Seq
 
 canCast :: Ability -> Model -> HeroID -> Bool
@@ -50,23 +51,18 @@ determineIfHeroKilled hero =
 applyFocusCost :: Integer -> HeroID -> Model -> Model
 applyFocusCost cost targetID m =
   let target = findHero targetID m
-   in adjustFocus cost target & updateHero m
+   in adjustFocus (-cost) target & updateHero m
 
 adjustFocus :: Integer -> Hero -> Hero
 adjustFocus value hero = hero {focusAmount = focusAmount hero + value}
 
-findLeftHeroID :: Model -> HeroID
-findLeftHeroID m =
-  case find (\h -> battleSide h == LeftSide) (m & heroes) of
-    Just hero -> heroID hero
-    Nothing -> error "i tried to find a hero on the left battle side and failed"
-
-findRightHeroID :: Model -> HeroID
-findRightHeroID m =
-  case find (\h -> battleSide h == RightSide) (m & heroes) of
+findHeroID :: BattleSide -> Model -> HeroID
+findHeroID side m =
+  case find (\h -> battleSide h == side) (m & heroes) of
     Just hero -> heroID hero
     Nothing ->
-      error "i tried to find a hero on the right battle side and failed"
+      error $
+      "i tried to find a hero on the " ++ show side ++ " battle side and failed"
 
 findHero :: HeroID -> Model -> Hero
 findHero hID m =

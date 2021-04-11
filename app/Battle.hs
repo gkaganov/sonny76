@@ -2,30 +2,40 @@
 
 module Battle where
 
+import AbilityData
+import AbilityList
+import Hero
 import Model
-import Ability
 
-playerTurn :: Integer -> Model -> Model
-playerTurn abilityNum m =
+import Data.Function ((&))
+
+humanTurn :: Integer -> Model -> Model
+humanTurn abilityNum m =
   let ability =
         case abilityNum of
           0 -> Slash
           1 -> Hack
           n -> error $ "there is no ability defined for slot " ++ show n
-   in if m & player & dead
+      hero = findHero (findHeroID LeftSide m) m
+      enemy = findHero (findHeroID RightSide m) m
+   in if dead hero
         then m
-        else m {humanActive = False} & cast ability Player Enemy &
-             handleAbilityAnimation ability Player
+        else m {humanActive = False} & cast ability (heroID hero) (heroID enemy) &
+             handleAbilityAnimation ability (heroID hero)
 
-enemyTurn :: Model -> Model
-enemyTurn m =
+aiTurn :: Model -> Model
+aiTurn m =
   let ability = Slash
-   in if m & enemy & dead
+      hero = findHero (findHeroID RightSide m) m
+      enemy = findHero (findHeroID LeftSide m) m
+   in if dead hero
         then m
-        else cast ability Enemy Player m & handleAbilityAnimation ability Enemy
+        else cast ability (heroID hero) (heroID enemy) m &
+             handleAbilityAnimation ability (heroID hero)
 
 determineIfBattleFinished :: Model -> Model
 determineIfBattleFinished m =
-  if dead (player m) || dead (enemy m)
+  if dead (findHero (findHeroID LeftSide m) m) ||
+     dead (findHero (findHeroID RightSide m) m)
     then m {battleFinished = True}
     else m

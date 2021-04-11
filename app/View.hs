@@ -1,14 +1,85 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
+
 module View
   ( viewModel
   ) where
 
-import Model
 import Hero
+import Model
+import AbilityData
 
 import Miso
-import qualified Data.Map as M
 import Miso.String (MisoString, ms)
+
+import Data.Aeson (Value, (.:), withObject)
+
+import qualified Data.Map as M
+
+animationEndHandler :: HeroID -> Attribute Action
+animationEndHandler hID =
+  Miso.on "animationend" animationNameDecoder $ \case
+    "left-slash" -> AttackAnimationEnd hID
+    "right-slash" -> AttackAnimationEnd hID
+    "left-hack" -> AttackAnimationEnd hID
+    "right-hack" -> AttackAnimationEnd hID
+    _ -> NoOp
+
+animationNameDecoder :: Decoder Value
+animationNameDecoder =
+  Decoder
+    { decodeAt = DecodeTarget mempty
+    , decoder = withObject "event" $ \o -> o .: "animationName"
+    }
+
+buildBattleSide :: BattleSide -> Model -> View Action
+buildBattleSide side m =
+  let hero = findHero (findHeroID side m) m
+   in div_
+        [class_ "vertical hero-box"]
+        [ div_
+            [ class_ "health-bar-container"
+            , style_ $
+              M.fromList [("width", "var(--health-bar-container-width)")]
+            ]
+            [ div_
+                [class_ $ ms $ "health-amount " ++ show side]
+                [text $ ms $ show $ health hero]
+            , div_
+                [ classList_
+                    [ (ms $ "health-bar " ++ show side, True)
+                    , calculateHealthBarColorLabel hero
+                    ]
+                , style_ $ M.fromList [("width", buildHealthBarWidth hero)]
+                ]
+                []
+            ]
+        , div_
+            [ class_ "focus-bar-container"
+            , style_ $
+              M.fromList [("width", "var(--focus-bar-container-width)")]
+            ]
+            [ div_
+                [class_ $ ms $ "focus-amount " ++ show side]
+                [text $ ms $ show $ focusAmount hero]
+            , div_
+                [ class_ $ ms $ "focus-bar " ++ show side
+                , style_ $ M.fromList [("width", buildFocusBarWidth hero)]
+                ]
+                []
+            ]
+        , div_
+            [ classList_
+                [ (ms $ "hero " ++ show side, True)
+                , (ms $ show $ currentAnimation hero, True)
+                ]
+            , animationEndHandler $ heroID hero
+            ]
+            []
+        , p_ [class_ "text"] [text $ ms $ name hero]
+        ]
 
 -- Constructs a virtual DOM from a model
 viewModel :: Model -> View Action
@@ -26,99 +97,7 @@ viewModel m =
         ]
     , div_
         [class_ "horizontal battle-sides"]
-        [ div_
-            [class_ "vertical hero-box"]
-            [ div_
-                [ class_ "health-bar-container"
-                , style_ $
-                  M.fromList [("width", "var(--health-bar-container-width)")]
-                ]
-                [ div_
-                    [class_ "health-amount player"]
-                    [text $ ms $ show $ health $ player m]
-                , div_
-                    [ classList_
-                        [ ("health-bar player", True)
-                        , calculateHealthBarColorLabel $ player m
-                        ]
-                    , style_ $
-                      M.fromList [("width", buildHealthBarWidth m Player)]
-                    ]
-                    []
-                ]
-            , div_
-                [ class_ "focus-bar-container"
-                , style_ $
-                  M.fromList [("width", "var(--focus-bar-container-width)")]
-                ]
-                [ div_
-                    [class_ "focus-amount player"]
-                    [text $ ms $ show $ focusAmount $ player m]
-                , div_
-                    [ class_ "focus-bar player"
-                    , style_ $
-                      M.fromList [("width", buildFocusBarWidth m Player)]
-                    ]
-                    []
-                ]
-            , div_
-                [ classList_
-                    [ ("hero player", True)
-                    , if | slashing $ player m -> ("slashing", True)
-                         | hacking $ player m -> ("hacking", True)
-                         | otherwise -> ("idling", True)
-                    ]
-                , animationEndHandler Player
-                ]
-                []
-            , p_ [class_ "text"] [text $ ms $ name $ player m]
-            ]
-        , div_
-            [class_ "vertical hero-box"]
-            [ div_
-                [ class_ "health-bar-container"
-                , style_ $
-                  M.fromList [("width", "var(--health-bar-container-width)")]
-                ]
-                [ div_
-                    [class_ "health-amount enemy"]
-                    [text $ ms $ show $ health $ enemy m]
-                , div_
-                    [ classList_
-                        [ ("health-bar enemy", True)
-                        , calculateHealthBarColorLabel $ enemy m
-                        ]
-                    , style_ $
-                      M.fromList [("width", buildHealthBarWidth m Enemy)]
-                    ]
-                    []
-                ]
-            , div_
-                [ class_ "focus-bar-container"
-                , style_ $
-                  M.fromList [("width", "var(--focus-bar-container-width)")]
-                ]
-                [ div_
-                    [class_ "focus-amount enemy"]
-                    [text $ ms $ show $ focusAmount $ enemy m]
-                , div_
-                    [ class_ "focus-bar enemy"
-                    , style_ $
-                      M.fromList [("width", buildFocusBarWidth m Enemy)]
-                    ]
-                    []
-                ]
-            , div_
-                [ class_
-                    (if slashing $ enemy m
-                       then "slashing hero enemy"
-                       else "idling hero enemy")
-                , animationEndHandler Enemy
-                ]
-                []
-            , p_ [class_ "text"] [text $ ms $ name $ enemy m]
-            ]
-        ]
+        [buildBattleSide LeftSide m, buildBattleSide RightSide m]
     , div_
         [class_ "horizontal ability-bar"]
         [ div_
@@ -145,7 +124,7 @@ viewModel m =
             [ classList_
                 [ ("ability-button", True)
                 , ( "enabled"
-                  , (humanActive m && canCast Hack m (findRightHeroID m)) ||
+                  , humanActive m && canCast Hack m (findHeroID LeftSide m) ||
                     battleFinished m)
                 ]
             ]
@@ -153,8 +132,7 @@ viewModel m =
                 [ onClick $
                   if battleFinished m
                     then Restart
-                    else if humanActive m &&
-                            focusAmount (findHero (findRightHeroID m) m) >= 40
+                    else if humanActive m && canCast Hack m (findHeroID LeftSide m)
                            then AbilityBtnPressed 1
                            else NoOp
                 ]
@@ -167,12 +145,12 @@ viewModel m =
         ]
     ]
 
-buildHealthBarWidth :: Model -> HeroID -> MisoString
-buildHealthBarWidth m hID =
+buildHealthBarWidth :: Hero -> MisoString
+buildHealthBarWidth hero =
   ms
     ("calc(" ++
      "var(--health-bar-width) * " ++
-     "(" ++ show (health $ findHero hID m) ++ "/" ++ show 1000 ++ "))")
+     "(" ++ show (health hero) ++ "/" ++ show 1000 ++ "))")
 
 calculateHealthBarColorLabel :: Hero -> (MisoString, Bool)
 calculateHealthBarColorLabel hero =
@@ -180,9 +158,9 @@ calculateHealthBarColorLabel hero =
      | health hero > 250 -> ("medium", True)
      | otherwise -> ("low", True)
 
-buildFocusBarWidth :: Model -> HeroID -> MisoString
-buildFocusBarWidth m hID =
+buildFocusBarWidth :: Hero -> MisoString
+buildFocusBarWidth hero =
   ms
     ("calc(" ++
      "var(--focus-bar-width) * " ++
-     "(" ++ show (focusAmount $ findHero hID m) ++ "/" ++ show 100 ++ "))")
+     "(" ++ show (focusAmount hero) ++ "/" ++ show 100 ++ "))")

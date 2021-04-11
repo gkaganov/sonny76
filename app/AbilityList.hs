@@ -2,7 +2,7 @@ module AbilityList
   ( cast
   ) where
 
-import Ability
+import AbilityData
 import Hero
 import Model
 

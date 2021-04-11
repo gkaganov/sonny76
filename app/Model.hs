@@ -74,8 +74,4 @@ data HeroAnimation
 data BattleSide
   = LeftSide
   | RightSide
-  deriving (Eq)
-
-instance Show BattleSide where
-  show LeftSide = "left"
-  show RightSide = "right"
+  deriving (Show, Eq)
