@@ -7,14 +7,15 @@ module View
   ( viewModel
   ) where
 
+import Ability
 import Hero
 import Model
-import AbilityData
 
 import Miso
 import Miso.String (MisoString, ms)
 
 import Data.Aeson (Value, (.:), withObject)
+import Data.Sequence (Seq)
 
 import qualified Data.Map as M
 
@@ -34,7 +35,7 @@ animationNameDecoder =
     , decoder = withObject "event" $ \o -> o .: "animationName"
     }
 
-buildBattleSide :: BattleSide -> Model -> View Action
+buildBattleSide :: BattleSide -> Seq Hero -> View Action
 buildBattleSide side m =
   let hero = findHero (findHeroID side m) m
    in div_
@@ -84,66 +85,69 @@ buildBattleSide side m =
 -- Constructs a virtual DOM from a model
 viewModel :: Model -> View Action
 viewModel m =
-  div_
-    [class_ "vertical root"]
-    [ link_ [rel_ "stylesheet", href_ "assets/css/style.css"]
-    , link_ [rel_ "icon", href_ "assets/favicon.ico"]
-    , h3_
-        [class_ "text"]
-        [ text $
-          if battleFinished m
-            then "YOU WIN"
-            else "sonny76"
-        ]
-    , div_
-        [class_ "horizontal battle-sides"]
-        [buildBattleSide LeftSide m, buildBattleSide RightSide m]
-    , div_
-        [class_ "horizontal ability-bar"]
-        [ div_
-            [ classList_
-                [ ("ability-button", True)
-                , ("enabled", humanActive m || battleFinished m)
-                ]
-            ]
-            [ p_
-                [ onClick $
-                  if battleFinished m
-                    then Restart
-                    else if humanActive m
-                           then AbilityBtnPressed 0
-                           else NoOp
-                ]
-                [ text $
-                  if battleFinished m
-                    then "restart"
-                    else "slash"
-                ]
+  let heroes = heroesInBattle m
+   in div_
+        [class_ "vertical root"]
+        [ link_ [rel_ "stylesheet", href_ "assets/css/style.css"]
+        , link_ [rel_ "icon", href_ "assets/favicon.ico"]
+        , h3_
+            [class_ "text"]
+            [ text $
+              if battleFinished m
+                then "YOU WIN"
+                else "sonny76"
             ]
         , div_
-            [ classList_
-                [ ("ability-button", True)
-                , ( "enabled"
-                  , humanActive m && canCast Hack m (findHeroID LeftSide m) ||
-                    battleFinished m)
+            [class_ "horizontal battle-sides"]
+            [buildBattleSide LeftSide heroes, buildBattleSide RightSide heroes]
+        , div_
+            [class_ "horizontal ability-bar"]
+            [ div_
+                [ classList_
+                    [ ("ability-button", True)
+                    , ("enabled", humanActive m || battleFinished m)
+                    ]
                 ]
-            ]
-            [ p_
-                [ onClick $
-                  if battleFinished m
-                    then Restart
-                    else if humanActive m && canCast Hack m (findHeroID LeftSide m)
-                           then AbilityBtnPressed 1
-                           else NoOp
+                [ p_
+                    [ onClick $
+                      if battleFinished m
+                        then Restart
+                        else if humanActive m
+                               then AbilityBtnPressed 0
+                               else NoOp
+                    ]
+                    [ text $
+                      if battleFinished m
+                        then "restart"
+                        else "slash"
+                    ]
                 ]
-                [ text $
-                  if battleFinished m
-                    then "restart"
-                    else "hack"
+            , div_
+                [ classList_
+                    [ ("ability-button", True)
+                    , ( "enabled"
+                      , humanActive m &&
+                        canCast Hack (findHeroID LeftSide heroes) heroes ||
+                        battleFinished m)
+                    ]
+                ]
+                [ p_
+                    [ onClick $
+                      if battleFinished m
+                        then Restart
+                        else if humanActive m &&
+                                canCast Hack (findHeroID LeftSide heroes) heroes
+                               then AbilityBtnPressed 1
+                               else NoOp
+                    ]
+                    [ text $
+                      if battleFinished m
+                        then "restart"
+                        else "hack"
+                    ]
                 ]
             ]
         ]
-    ]
 
 buildHealthBarWidth :: Hero -> MisoString
 buildHealthBarWidth hero =

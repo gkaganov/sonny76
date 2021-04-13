@@ -22,7 +22,12 @@ source-repository head
 executable sonny76
   main-is: Main.hs
   other-modules:
-      Paths_sonny76
+      Ability
+      AbilityImpl
+      Hero
+      Model
+      Update
+      View
   hs-source-dirs:
       app
   ghc-options:

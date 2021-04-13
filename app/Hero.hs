@@ -2,37 +2,61 @@
 
 module Hero where
 
-import AbilityData
-import Model
+import Ability
 
 import Data.Foldable (find)
 import Data.Function ((&))
+import Data.Sequence (Seq)
 
 import qualified Data.Sequence as Seq
 
-canCast :: Ability -> Model -> HeroID -> Bool
-canCast Slash _ _ = True
-canCast Hack m hID = enoughFocus hID Hack m
+data Hero =
+  Hero
+    { heroID :: HeroID
+    , name :: String
+    , battleSide :: BattleSide
+    , health :: Integer
+    , focusAmount :: Integer
+    , currentAnimation :: HeroAnimation
+    , dead :: Bool
+    }
+  deriving (Show, Eq)
 
-enoughFocus :: HeroID -> Ability -> Model -> Bool
-enoughFocus hID a m =
+type HeroID = Integer
+
+data HeroAnimation
+  = Idling
+  | Slashing
+  | Hacking
+  deriving (Eq, Show)
+
+data BattleSide
+  = LeftSide
+  | RightSide
+  deriving (Show, Eq)
+
+canCast :: Ability -> HeroID -> Seq Hero -> Bool
+canCast = enoughFocus
+
+enoughFocus :: Ability -> HeroID -> Seq Hero -> Bool
+enoughFocus a hID m =
   let hero = findHero hID m
       currentFocus = focusAmount hero
    in currentFocus >= focusCost a
 
-applyDamage :: Integer -> HeroID -> Model -> Model
+applyDamage :: Integer -> HeroID -> Seq Hero -> Seq Hero
 applyDamage damage targetID m =
   let hero = findHero targetID m
    in adjustHealth hero (-damage) & updateHero m
 
-setHeroAnimation :: HeroAnimation -> HeroID -> Model -> Model
+setHeroAnimation :: HeroAnimation -> HeroID -> Seq Hero -> Seq Hero
 setHeroAnimation anim hID m =
   findHero hID m & (\h -> h {currentAnimation = anim}) & updateHero m
 
-updateHero :: Model -> Hero -> Model
-updateHero m newHero =
-  case Seq.findIndexL (\h -> heroID h == heroID newHero) (m & heroes) of
-    Just i -> m {heroes = Seq.update i newHero (m & heroes)}
+updateHero :: Seq Hero -> Hero -> Seq Hero
+updateHero heroes newHero =
+  case Seq.findIndexL (\h -> heroID h == heroID newHero) heroes of
+    Just i -> Seq.update i newHero heroes
     Nothing ->
       error $
       "i tried to update a hero by id " ++
@@ -48,7 +72,7 @@ determineIfHeroKilled hero =
     then hero {dead = True, health = 0}
     else hero
 
-applyFocusCost :: Integer -> HeroID -> Model -> Model
+applyFocusCost :: Integer -> HeroID -> Seq Hero -> Seq Hero
 applyFocusCost cost targetID m =
   let target = findHero targetID m
    in adjustFocus (-cost) target & updateHero m
@@ -56,21 +80,21 @@ applyFocusCost cost targetID m =
 adjustFocus :: Integer -> Hero -> Hero
 adjustFocus value hero = hero {focusAmount = focusAmount hero + value}
 
-findHeroID :: BattleSide -> Model -> HeroID
-findHeroID side m =
-  case find (\h -> battleSide h == side) (m & heroes) of
+findHeroID :: BattleSide -> Seq Hero -> HeroID
+findHeroID side heroes =
+  case find (\h -> battleSide h == side) heroes of
     Just hero -> heroID hero
     Nothing ->
       error $
       "i tried to find a hero on the " ++ show side ++ " battle side and failed"
 
-findHero :: HeroID -> Model -> Hero
-findHero hID m =
-  case find (\h -> heroID h == hID) (m & heroes) of
+findHero :: HeroID -> Seq Hero -> Hero
+findHero hID heroes =
+  case find (\h -> heroID h == hID) heroes of
     Just hero -> hero
     Nothing ->
       error $ "i tried to find a hero by id " ++ show hID ++ " and failed"
 
-handleAbilityAnimation :: Ability -> HeroID -> Model -> Model
+handleAbilityAnimation :: Ability -> HeroID -> Seq Hero -> Seq Hero
 handleAbilityAnimation Slash = setHeroAnimation Slashing
 handleAbilityAnimation Hack = setHeroAnimation Hacking
