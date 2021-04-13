@@ -39,7 +39,7 @@ buildBattleSide :: BattleSide -> Seq Hero -> View Action
 buildBattleSide side m =
   let hero = findHero (findHeroID side m) m
    in div_
-        [class_ "vertical hero-box"]
+        [class_ "vertical centered hero-box"]
         [ div_
             [ class_ "health-bar-container"
             , style_ $
@@ -72,6 +72,11 @@ buildBattleSide side m =
                 []
             ]
         , div_
+            [class_ $ ms ("buff-container horizontal " ++ show side)]
+            [ div_ [] [img_ [class_ "buff", src_ "assets/ability-button.png"]]
+            , div_ [] [img_ [class_ "buff", src_ "assets/ability-button.png"]]
+            ]
+        , div_
             [ classList_
                 [ (ms $ "hero " ++ show side, True)
                 , (ms $ show $ currentAnimation hero, True)
@@ -87,7 +92,7 @@ viewModel :: Model -> View Action
 viewModel m =
   let heroes = heroesInBattle m
    in div_
-        [class_ "vertical root"]
+        [class_ "vertical centered root"]
         [ link_ [rel_ "stylesheet", href_ "assets/css/style.css"]
         , link_ [rel_ "icon", href_ "assets/favicon.ico"]
         , h3_

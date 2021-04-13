@@ -7,13 +7,14 @@ $padding: 5px
   --focus-bar-width: calc(var(--focus-bar-container-width) - 2 * #{$padding})
 
 .focus-bar-container
-  margin-bottom: 20px
+  margin-bottom: 5px
   box-sizing: border-box
   height: 20px
   width: var(--focus-bar-container-width)
   padding: $padding
   background: #ddd
   border-radius: 5px
+  // needed to position the children relative to this
   position: relative
 
 .focus-bar
@@ -21,7 +22,7 @@ $padding: 5px
   position: absolute
   transition: width 0.25s, background-color 2s
   background-color: #3399ff
-  &.enemy
+  &.RightSide
     right: $padding
 
 .focus-amount
@@ -29,7 +30,7 @@ $padding: 5px
   top: 4px
   z-index: 1
   font-size: 8px
-  &.player
+  &.LeftSide
     right: 10px
-  &.enemy
+  &.RightSide
     left: 10px
