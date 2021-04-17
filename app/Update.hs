@@ -25,6 +25,7 @@ updateModel (AttackAnimationEnd hID) m =
      RightSide -> \m' -> m' {humanActive = True}) &
   determineIfBattleFinished &
   noEff
+updateModel (ElementHovered buff) m = m {hoveredElement = buff} & noEff
 updateModel Restart _ = initialModel & noEff
 
 humanTurn :: Int -> Model -> Model

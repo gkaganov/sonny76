@@ -3,6 +3,7 @@
 module Model where
 
 import Ability
+import Buff
 import Hero
 
 data Model =
@@ -10,6 +11,7 @@ data Model =
     { heroesInBattle :: [Hero]
     , battleWinner :: Maybe BattleSide
     , humanActive :: Bool
+    , hoveredElement :: Maybe Buff
     }
   deriving (Show, Eq)
 
@@ -18,6 +20,7 @@ data Action
   | Print String
   | AbilityBtnPressed Int
   | AttackAnimationEnd HeroID
+  | ElementHovered (Maybe Buff)
   | Restart
   deriving (Show, Eq)
 
@@ -52,6 +55,7 @@ initialModel =
         ]
     , battleWinner = Nothing
     , humanActive = True
+    , hoveredElement = Nothing
     }
 
 newtype GuiEvent =

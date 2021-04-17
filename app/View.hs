@@ -42,7 +42,11 @@ buildBuffIcon buff =
   div_
     []
     [ img_
-        [class_ $ ms $ "buff " ++ show buff, src_ "assets/ability-button.png"]
+        [ class_ $ ms $ "buff " ++ show buff
+        , src_ "assets/ability-button.png"
+        , onMouseOver $ ElementHovered $ Just buff
+        , onMouseOut $ ElementHovered Nothing
+        ]
     ]
 
 buildBattleSide :: BattleSide -> [Hero] -> View Action
@@ -109,8 +113,15 @@ viewModel m =
                 _ -> "sonny76"
             ]
         , div_
-            [class_ "horizontal battle-sides"]
-            [buildBattleSide LeftSide heroes, buildBattleSide RightSide heroes]
+            [class_ "horizontal top battle-sides"]
+            [ buildBattleSide LeftSide heroes
+            , div_
+                [class_ "info-box"]
+                (case hoveredElement m of
+                   Just helem -> buildInfoBoxContents $ description helem
+                   _ -> [])
+            , buildBattleSide RightSide heroes
+            ]
         , div_
             [class_ "horizontal ability-bar"]
             [ div_
@@ -162,6 +173,10 @@ viewModel m =
                 ]
             ]
         ]
+
+buildInfoBoxContents :: BuffDescription -> [View Action]
+buildInfoBoxContents desc =
+  [b_ [] [text $ ms $ descTitle desc], p_ [] [text $ ms $ descText desc]]
 
 buildHealthBarWidth :: Hero -> MisoString
 buildHealthBarWidth hero =
