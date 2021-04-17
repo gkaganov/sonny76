@@ -3,21 +3,35 @@ module AbilityImpl
   ) where
 
 import Ability
+import Buff
 import Hero
 
 import Data.Function
-import Data.Sequence (Seq)
 
-cast :: Ability -> HeroID -> HeroID -> Seq Hero -> Seq Hero
+cast :: Ability -> HeroID -> HeroID -> [Hero] -> [Hero]
 cast Slash caster target heroes =
   let damage = 150
       fCost = focusCost Slash
-   in defaultCast damage fCost caster target heroes
+      buffs = [PeaceOfTheLightBlade]
+   in defaultCast damage fCost buffs caster target heroes
 cast Hack caster target heroes =
   let damage = 350
       fCost = focusCost Hack
-   in defaultCast damage fCost caster target heroes
+      buffs = [PoisonOfTheHeavyBlade]
+   in defaultCast damage fCost buffs caster target heroes
+cast Destroy caster target heroes =
+  let damage = 10000
+      fCost = focusCost Destroy
+      buffs = []
+   in defaultCast damage fCost buffs caster target heroes
+cast Wound caster target heroes =
+  let damage = 100
+      fCost = focusCost Wound
+      buffs = []
+   in defaultCast damage fCost buffs caster target heroes
 
-defaultCast :: Integer -> Integer -> HeroID -> HeroID -> Seq Hero -> Seq Hero
-defaultCast damage fCost caster target heroes =
-  heroes & applyFocusCost fCost caster & applyDamage damage target
+defaultCast ::
+     Integer -> Integer -> [Buff] -> HeroID -> HeroID -> [Hero] -> [Hero]
+defaultCast damage fCost buffs caster target heroes =
+  heroes & applyFocusLoss fCost caster & applyDamage damage target &
+  applyBuffs buffs target

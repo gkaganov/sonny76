@@ -3,10 +3,10 @@
 module Hero where
 
 import Ability
+import Buff
 
-import Data.Foldable (find)
+import Data.Foldable (find, toList)
 import Data.Function ((&))
-import Data.Sequence (Seq)
 
 import qualified Data.Sequence as Seq
 
@@ -17,12 +17,19 @@ data Hero =
     , battleSide :: BattleSide
     , health :: Integer
     , focusAmount :: Integer
+    , activeBuffs :: [Buff]
+    , activeStatusEffects :: [StatusEffect]
+    , availableAbilities :: [Ability]
     , currentAnimation :: HeroAnimation
     , dead :: Bool
     }
   deriving (Show, Eq)
 
 type HeroID = Integer
+
+data StatusEffect =
+  Silenced
+  deriving (Eq, Show)
 
 data HeroAnimation
   = Idling
@@ -35,32 +42,33 @@ data BattleSide
   | RightSide
   deriving (Show, Eq)
 
-canCast :: Ability -> HeroID -> Seq Hero -> Bool
+canCast :: Ability -> HeroID -> [Hero] -> Bool
 canCast = enoughFocus
 
-enoughFocus :: Ability -> HeroID -> Seq Hero -> Bool
-enoughFocus a hID m =
-  let hero = findHero hID m
+enoughFocus :: Ability -> HeroID -> [Hero] -> Bool
+enoughFocus a hID heroes =
+  let hero = findHero hID heroes
       currentFocus = focusAmount hero
    in currentFocus >= focusCost a
 
-applyDamage :: Integer -> HeroID -> Seq Hero -> Seq Hero
-applyDamage damage targetID m =
-  let hero = findHero targetID m
-   in adjustHealth hero (-damage) & updateHero m
+applyDamage :: Integer -> HeroID -> [Hero] -> [Hero]
+applyDamage damage targetID heroes =
+  let hero = findHero targetID heroes
+   in adjustHealth hero (-damage) & updateHero heroes
 
-setHeroAnimation :: HeroAnimation -> HeroID -> Seq Hero -> Seq Hero
-setHeroAnimation anim hID m =
-  findHero hID m & (\h -> h {currentAnimation = anim}) & updateHero m
+setHeroAnimation :: HeroAnimation -> HeroID -> [Hero] -> [Hero]
+setHeroAnimation anim hID heroes =
+  findHero hID heroes & (\h -> h {currentAnimation = anim}) & updateHero heroes
 
-updateHero :: Seq Hero -> Hero -> Seq Hero
-updateHero heroes newHero =
-  case Seq.findIndexL (\h -> heroID h == heroID newHero) heroes of
-    Just i -> Seq.update i newHero heroes
-    Nothing ->
-      error $
-      "i tried to update a hero by id " ++
-      show (heroID newHero) ++ " and failed"
+updateHero :: [Hero] -> Hero -> [Hero]
+updateHero arrayHeroes newHero =
+  let heroes = Seq.fromList arrayHeroes
+   in case Seq.findIndexL (\h -> heroID h == heroID newHero) heroes of
+        Just i -> Seq.update i newHero heroes & toList
+        Nothing ->
+          error $
+          "i tried to update a hero by id " ++
+          show (heroID newHero) ++ " and failed"
 
 adjustHealth :: Hero -> Integer -> Hero
 adjustHealth hero value =
@@ -72,15 +80,15 @@ determineIfHeroKilled hero =
     then hero {dead = True, health = 0}
     else hero
 
-applyFocusCost :: Integer -> HeroID -> Seq Hero -> Seq Hero
-applyFocusCost cost targetID m =
-  let target = findHero targetID m
-   in adjustFocus (-cost) target & updateHero m
+applyFocusLoss :: Integer -> HeroID -> [Hero] -> [Hero]
+applyFocusLoss amount targetID heroes =
+  let target = findHero targetID heroes
+   in adjustFocus (-amount) target & updateHero heroes
 
 adjustFocus :: Integer -> Hero -> Hero
 adjustFocus value hero = hero {focusAmount = focusAmount hero + value}
 
-findHeroID :: BattleSide -> Seq Hero -> HeroID
+findHeroID :: BattleSide -> [Hero] -> HeroID
 findHeroID side heroes =
   case find (\h -> battleSide h == side) heroes of
     Just hero -> heroID hero
@@ -88,13 +96,29 @@ findHeroID side heroes =
       error $
       "i tried to find a hero on the " ++ show side ++ " battle side and failed"
 
-findHero :: HeroID -> Seq Hero -> Hero
+findHero :: HeroID -> [Hero] -> Hero
 findHero hID heroes =
   case find (\h -> heroID h == hID) heroes of
     Just hero -> hero
     Nothing ->
       error $ "i tried to find a hero by id " ++ show hID ++ " and failed"
 
-handleAbilityAnimation :: Ability -> HeroID -> Seq Hero -> Seq Hero
+applyBuffs :: [Buff] -> HeroID -> [Hero] -> [Hero]
+applyBuffs buffs hID heroes =
+  let hero = findHero hID heroes
+   in addBuffs buffs hero & updateHero heroes
+
+addBuffs :: [Buff] -> Hero -> Hero
+addBuffs buffs hero = hero {activeBuffs = (hero & activeBuffs) ++ buffs}
+
+applyStatusEffect :: StatusEffect -> HeroID -> [Hero] -> [Hero]
+applyStatusEffect effect hID heroes =
+  let hero = findHero hID heroes
+   in hero {activeStatusEffects = (hero & activeStatusEffects) ++ [effect]} &
+      updateHero heroes
+
+handleAbilityAnimation :: Ability -> HeroID -> [Hero] -> [Hero]
 handleAbilityAnimation Slash = setHeroAnimation Slashing
 handleAbilityAnimation Hack = setHeroAnimation Hacking
+handleAbilityAnimation Destroy = setHeroAnimation Hacking
+handleAbilityAnimation Wound = setHeroAnimation Slashing

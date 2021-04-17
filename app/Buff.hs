@@ -3,6 +3,6 @@
 module Buff where
 
 data Buff
-  = Poisoned
-  | Silenced
+  = PoisonOfTheHeavyBlade
+  | PeaceOfTheLightBlade
   deriving (Show, Eq)

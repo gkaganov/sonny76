@@ -4,6 +4,7 @@ module Update
 
 import Ability
 import AbilityImpl
+import BuffImpl
 import Hero
 import Model
 
@@ -26,47 +27,55 @@ updateModel (AttackAnimationEnd hID) m =
   noEff
 updateModel Restart _ = initialModel & noEff
 
-humanTurn :: Integer -> Model -> Model
+humanTurn :: Int -> Model -> Model
 humanTurn abilityNum m =
-  let ability =
-        case abilityNum of
-          0 -> Slash
-          1 -> Hack
-          n -> error $ "there is no ability defined for slot " ++ show n
-      heroes = m & heroesInBattle
-      hero = findHero (findHeroID LeftSide heroes) heroes
-      enemy = findHero (findHeroID RightSide heroes) heroes
+  let heroes = m & heroesInBattle
+      hID = findHeroID LeftSide heroes
+      hero = findHero hID heroes
+      ability = (hero & availableAbilities) !! abilityNum
+      enemy = findHeroID RightSide heroes
    in if dead hero
         then m
         else m
                { humanActive = False
                , heroesInBattle =
-                   heroes & cast ability (heroID hero) (heroID enemy) &
-                   handleAbilityAnimation ability (heroID hero)
+                   heroes & triggerAllBuffs hID & cast ability hID enemy &
+                   handleAbilityAnimation ability hID
                }
 
 aiTurn :: Model -> Model
 aiTurn m =
-  let ability = Slash
-      heroes = m & heroesInBattle
-      hero = findHero (findHeroID RightSide heroes) heroes
-      enemy = findHero (findHeroID LeftSide heroes) heroes
+  let heroes = m & heroesInBattle
+      hID = findHeroID RightSide heroes
+      hero = findHero hID heroes
+      enemy = findHeroID LeftSide heroes
    in if dead hero
         then m
-        else m
-               { heroesInBattle =
-                   m & heroesInBattle &
-                   cast ability (heroID hero) (heroID enemy) &
-                   handleAbilityAnimation ability (heroID hero)
-               }
+        else let heroes' = triggerAllBuffs hID heroes
+                 ability =
+                   aiChooseAbility hID (hero & availableAbilities) heroes'
+              in m
+                   { heroesInBattle =
+                       heroes' & cast ability hID enemy &
+                       handleAbilityAnimation ability hID
+                   }
+
+aiChooseAbility :: HeroID -> [Ability] -> [Hero] -> Ability
+aiChooseAbility hID abilities heroes =
+  let highPrio = last abilities
+      lowPrio = head abilities
+   in if canCast highPrio hID heroes
+        then highPrio
+        else lowPrio
 
 determineIfBattleFinished :: Model -> Model
 determineIfBattleFinished m =
   let heroes = m & heroesInBattle
-   in if dead (findHero (findHeroID LeftSide heroes) heroes) ||
-         dead (findHero (findHeroID RightSide heroes) heroes)
-        then m {battleFinished = True}
-        else m
+   in if dead (findHero (findHeroID LeftSide heroes) heroes)
+        then m {battleWinner = Just RightSide}
+        else if dead (findHero (findHeroID RightSide heroes) heroes)
+               then m {battleWinner = Just LeftSide}
+               else m
 
 handleGuiEventAnimation :: GuiEvent -> Model -> Model
 handleGuiEventAnimation (AttackAnimationEndEvent hID) m =

@@ -8,6 +8,7 @@ module View
   ) where
 
 import Ability
+import Buff
 import Hero
 import Model
 
@@ -15,9 +16,10 @@ import Miso
 import Miso.String (MisoString, ms)
 
 import Data.Aeson (Value, (.:), withObject)
-import Data.Sequence (Seq)
+import Data.Function ((&))
 
 import qualified Data.Map as M
+import Data.Maybe
 
 animationEndHandler :: HeroID -> Attribute Action
 animationEndHandler hID =
@@ -35,7 +37,15 @@ animationNameDecoder =
     , decoder = withObject "event" $ \o -> o .: "animationName"
     }
 
-buildBattleSide :: BattleSide -> Seq Hero -> View Action
+buildBuffIcon :: Buff -> View Action
+buildBuffIcon buff =
+  div_
+    []
+    [ img_
+        [class_ $ ms $ "buff " ++ show buff, src_ "assets/ability-button.png"]
+    ]
+
+buildBattleSide :: BattleSide -> [Hero] -> View Action
 buildBattleSide side m =
   let hero = findHero (findHeroID side m) m
    in div_
@@ -73,9 +83,7 @@ buildBattleSide side m =
             ]
         , div_
             [class_ $ ms ("buff-container horizontal " ++ show side)]
-            [ div_ [] [img_ [class_ "buff", src_ "assets/ability-button.png"]]
-            , div_ [] [img_ [class_ "buff", src_ "assets/ability-button.png"]]
-            ]
+            (map buildBuffIcon (hero & activeBuffs))
         , div_
             [ classList_
                 [ (ms $ "hero " ++ show side, True)
@@ -98,9 +106,10 @@ viewModel m =
         , h3_
             [class_ "text"]
             [ text $
-              if battleFinished m
-                then "YOU WIN"
-                else "sonny76"
+              case battleWinner m of
+                Just LeftSide -> "YOU WIN"
+                Just RightSide -> "you lose"
+                _ -> "sonny76"
             ]
         , div_
             [class_ "horizontal battle-sides"]
@@ -110,21 +119,24 @@ viewModel m =
             [ div_
                 [ classList_
                     [ ("ability-button", True)
-                    , ("enabled", humanActive m || battleFinished m)
+                    , ( "enabled"
+                      , humanActive m &&
+                        canCast Slash (findHeroID LeftSide heroes) heroes ||
+                        isJust (battleWinner m))
                     ]
                 ]
                 [ p_
                     [ onClick $
-                      if battleFinished m
-                        then Restart
-                        else if humanActive m
-                               then AbilityBtnPressed 0
-                               else NoOp
+                      case battleWinner m of
+                        Just _ -> Restart
+                        _ ->
+                          if humanActive m
+                            then AbilityBtnPressed 0
+                            else NoOp
                     ]
-                    [ text $
-                      if battleFinished m
-                        then "restart"
-                        else "slash"
+                    [ case battleWinner m of
+                        Just _ -> text "restart"
+                        _ -> text "slash"
                     ]
                 ]
             , div_
@@ -133,22 +145,22 @@ viewModel m =
                     , ( "enabled"
                       , humanActive m &&
                         canCast Hack (findHeroID LeftSide heroes) heroes ||
-                        battleFinished m)
+                        isJust (battleWinner m))
                     ]
                 ]
                 [ p_
                     [ onClick $
-                      if battleFinished m
-                        then Restart
-                        else if humanActive m &&
-                                canCast Hack (findHeroID LeftSide heroes) heroes
-                               then AbilityBtnPressed 1
-                               else NoOp
+                      case battleWinner m of
+                        Just _ -> Restart
+                        _ ->
+                          if humanActive m &&
+                             canCast Hack (findHeroID LeftSide heroes) heroes
+                            then AbilityBtnPressed 1
+                            else NoOp
                     ]
-                    [ text $
-                      if battleFinished m
-                        then "restart"
-                        else "hack"
+                    [ case battleWinner m of
+                        Just _ -> text "restart"
+                        _ -> text "hack"
                     ]
                 ]
             ]

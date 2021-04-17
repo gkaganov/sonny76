@@ -2,14 +2,13 @@
 
 module Model where
 
+import Ability
 import Hero
-
-import Data.Sequence as Seq (Seq, fromList)
 
 data Model =
   Model
-    { heroesInBattle :: Seq Hero
-    , battleFinished :: Bool
+    { heroesInBattle :: [Hero]
+    , battleWinner :: Maybe BattleSide
     , humanActive :: Bool
     }
   deriving (Show, Eq)
@@ -17,7 +16,7 @@ data Model =
 data Action
   = NoOp
   | Print String
-  | AbilityBtnPressed Integer
+  | AbilityBtnPressed Int
   | AttackAnimationEnd HeroID
   | Restart
   deriving (Show, Eq)
@@ -26,27 +25,32 @@ initialModel :: Model
 initialModel =
   Model
     { heroesInBattle =
-        Seq.fromList
-          [ Hero
-              { name = "bro"
-              , heroID = 0
-              , battleSide = LeftSide
-              , health = 1000
-              , focusAmount = 100
-              , currentAnimation = Idling
-              , dead = False
-              }
-          , Hero
-              { name = "the baddies"
-              , heroID = 1
-              , battleSide = RightSide
-              , health = 1000
-              , focusAmount = 100
-              , currentAnimation = Idling
-              , dead = False
-              }
-          ]
-    , battleFinished = False
+        [ Hero
+            { name = "bro"
+            , heroID = 0
+            , battleSide = LeftSide
+            , health = 1000
+            , focusAmount = 100
+            , activeBuffs = []
+            , availableAbilities = [Slash, Hack]
+            , currentAnimation = Idling
+            , activeStatusEffects = []
+            , dead = False
+            }
+        , Hero
+            { name = "the baddies"
+            , heroID = 1
+            , battleSide = RightSide
+            , health = 1000
+            , focusAmount = 100
+            , activeBuffs = []
+            , availableAbilities = [Wound, Destroy]
+            , currentAnimation = Idling
+            , activeStatusEffects = []
+            , dead = False
+            }
+        ]
+    , battleWinner = Nothing
     , humanActive = True
     }
 

@@ -1,12 +1,19 @@
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
-module Ability where
+module Ability
+  ( Ability(..)
+  , focusCost
+  ) where
 
 data Ability
   = Slash
   | Hack
+  | Wound
+  | Destroy
   deriving (Show, Eq)
 
 focusCost :: Ability -> Integer
-focusCost Slash = 5
+focusCost Slash = 0
 focusCost Hack = 40
+focusCost Destroy = 60
+focusCost Wound = 0
