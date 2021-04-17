@@ -39,7 +39,7 @@ humanTurn abilityNum m =
         else let heroes' = triggerAllBuffs hID heroes
                  hero' = findHero hID heroes'
               in if dead hero'
-                   then m
+                   then m {heroesInBattle = heroes'}
                    else m
                           { humanActive = False
                           , heroesInBattle =
@@ -60,7 +60,7 @@ aiTurn m =
                    aiChooseAbility hID (hero & availableAbilities) heroes'
                  hero' = findHero hID heroes'
               in if dead hero'
-                   then m
+                   then m {heroesInBattle = heroes'}
                    else m
                           { heroesInBattle =
                               heroes' & cast ability hID enemy &
