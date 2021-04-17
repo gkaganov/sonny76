@@ -36,12 +36,16 @@ humanTurn abilityNum m =
       enemy = findHeroID RightSide heroes
    in if dead hero
         then m
-        else m
-               { humanActive = False
-               , heroesInBattle =
-                   heroes & triggerAllBuffs hID & cast ability hID enemy &
-                   handleAbilityAnimation ability hID
-               }
+        else let heroes' = triggerAllBuffs hID heroes
+                 hero' = findHero hID heroes'
+              in if dead hero'
+                   then m
+                   else m
+                          { humanActive = False
+                          , heroesInBattle =
+                              heroes' & cast ability hID enemy &
+                              handleAbilityAnimation ability hID
+                          }
 
 aiTurn :: Model -> Model
 aiTurn m =
@@ -54,11 +58,14 @@ aiTurn m =
         else let heroes' = triggerAllBuffs hID heroes
                  ability =
                    aiChooseAbility hID (hero & availableAbilities) heroes'
-              in m
-                   { heroesInBattle =
-                       heroes' & cast ability hID enemy &
-                       handleAbilityAnimation ability hID
-                   }
+                 hero' = findHero hID heroes'
+              in if dead hero'
+                   then m
+                   else m
+                          { heroesInBattle =
+                              heroes' & cast ability hID enemy &
+                              handleAbilityAnimation ability hID
+                          }
 
 aiChooseAbility :: HeroID -> [Ability] -> [Hero] -> Ability
 aiChooseAbility hID abilities heroes =

@@ -51,10 +51,7 @@ buildBattleSide side m =
    in div_
         [class_ "vertical centered hero-box"]
         [ div_
-            [ class_ "health-bar-container"
-            , style_ $
-              M.fromList [("width", "var(--health-bar-container-width)")]
-            ]
+            [class_ "health-bar-container"]
             [ div_
                 [class_ $ ms $ "health-amount " ++ show side]
                 [text $ ms $ show $ health hero]
