@@ -124,53 +124,49 @@ viewModel m =
             ]
         , div_
             [class_ "horizontal ability-bar"]
-            [ div_
-                [ classList_
-                    [ ("ability-button", True)
-                    , ( "enabled"
-                      , humanActive m &&
-                        canCast Slash (findHeroID LeftSide heroes) heroes ||
-                        isJust (battleWinner m))
-                    ]
-                ]
-                [ p_
-                    [ onClick $
-                      case battleWinner m of
-                        Just _ -> Restart
-                        _ ->
-                          if humanActive m
-                            then AbilityBtnPressed 0
-                            else NoOp
-                    ]
-                    [ case battleWinner m of
-                        Just _ -> text "restart"
-                        _ -> text "slash"
-                    ]
-                ]
-            , div_
-                [ classList_
-                    [ ("ability-button", True)
-                    , ( "enabled"
-                      , humanActive m &&
-                        canCast Hack (findHeroID LeftSide heroes) heroes ||
-                        isJust (battleWinner m))
-                    ]
-                ]
-                [ p_
-                    [ onClick $
-                      case battleWinner m of
-                        Just _ -> Restart
-                        _ ->
-                          if humanActive m &&
-                             canCast Hack (findHeroID LeftSide heroes) heroes
-                            then AbilityBtnPressed 1
-                            else NoOp
-                    ]
-                    [ case battleWinner m of
-                        Just _ -> text "restart"
-                        _ -> text "hack"
-                    ]
-                ]
+            (buildAbilityButtons
+               (availableAbilities
+                  (findHero (findHeroID LeftSide heroes) heroes))
+               0
+               m
+               [])
+        ]
+
+buildAbilityButtons ::
+     [Ability] -> Int -> Model -> [View Action] -> [View Action]
+buildAbilityButtons [ability] index m list =
+  list ++ [buildAbilityButton ability index m]
+buildAbilityButtons (ability:abilities) index m list =
+  buildAbilityButtons [ability] index m list &
+  buildAbilityButtons abilities (index + 1) m
+buildAbilityButtons [] _ _ _ = [div_ [] []]
+
+buildAbilityButton :: Ability -> Int -> Model -> View Action
+buildAbilityButton ability index m =
+  let heroes = heroesInBattle m
+      hID = findHeroID LeftSide heroes
+   in div_
+        [ classList_
+            [ ("ability-button", True)
+            , ( "enabled"
+              , humanActive m && canCast ability hID heroes ||
+                isJust (battleWinner m))
+            ]
+        ]
+        [ p_
+            [ onMouseOver $ ElementHovered Nothing
+            , onMouseOut $ ElementHovered Nothing
+            , onClick $
+              case battleWinner m of
+                Just _ -> Restart
+                _ ->
+                  if humanActive m
+                    then AbilityBtnPressed index
+                    else NoOp
+            ]
+            [ case battleWinner m of
+                Just _ -> text "restart"
+                _ -> text $ ms $ show ability
             ]
         ]
 

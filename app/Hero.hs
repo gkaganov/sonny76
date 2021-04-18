@@ -29,13 +29,13 @@ type HeroID = Integer
 
 data StatusEffect =
   Silenced
-  deriving (Eq, Show)
+  deriving (Show, Eq)
 
 data HeroAnimation
   = Idling
   | Slashing
   | Hacking
-  deriving (Eq, Show)
+  deriving (Show, Eq)
 
 data BattleSide
   = LeftSide
