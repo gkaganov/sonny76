@@ -4,9 +4,11 @@ module Update
 
 import Ability
 import AbilityImpl
+import Buff
 import BuffImpl
 import Hero
 import Model
+import SharedModel
 
 import Miso.Effect
 
@@ -25,7 +27,12 @@ updateModel (AttackAnimationEnd hID) m =
      RightSide -> \m' -> m' {humanActive = True}) &
   determineIfBattleFinished &
   noEff
-updateModel (ElementHovered buff) m = m {hoveredElement = buff} & noEff
+updateModel (BuffHovered buff) m =
+  m {infoBoxContents = Buff.description buff} & noEff
+updateModel (AbilityHovered ability) m =
+  m {infoBoxContents = Ability.description ability} & noEff
+updateModel NothingHovered m =
+  m {infoBoxContents = GameDescription {descTitle = "", descText = ""}} & noEff
 updateModel Restart _ = initialModel & noEff
 
 humanTurn :: Int -> Model -> Model

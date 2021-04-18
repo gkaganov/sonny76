@@ -28,6 +28,7 @@ executable sonny76
       BuffImpl
       Hero
       Model
+      SharedModel
       Update
       View
   hs-source-dirs:

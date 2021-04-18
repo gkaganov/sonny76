@@ -24,8 +24,9 @@ cabal install hindent\
 ./run\
 firefox localhost:8080
 
-## release (takes ~2h at first run)
+## local build (takes ~2h at first run)
 nix-build
 
-## deploy
-./deploy
+## remote deploy
+git push
+

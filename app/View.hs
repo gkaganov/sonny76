@@ -11,6 +11,7 @@ import Ability
 import Buff
 import Hero
 import Model
+import SharedModel
 
 import Miso
 import Miso.String (MisoString, ms)
@@ -44,8 +45,8 @@ buildBuffIcon buff =
     [ img_
         [ class_ $ ms $ "buff " ++ show buff
         , src_ "assets/ability-button.png"
-        , onMouseOver $ ElementHovered $ Just buff
-        , onMouseOut $ ElementHovered Nothing
+        , onMouseOver $ BuffHovered buff
+        , onMouseOut NothingHovered
         ]
     ]
 
@@ -117,9 +118,7 @@ viewModel m =
             [ buildBattleSide LeftSide heroes
             , div_
                 [class_ "info-box"]
-                (case hoveredElement m of
-                   Just helem -> buildInfoBoxContents $ description helem
-                   _ -> [])
+                (m & infoBoxContents & buildInfoBoxContents)
             , buildBattleSide RightSide heroes
             ]
         , div_
@@ -154,8 +153,8 @@ buildAbilityButton ability index m =
             ]
         ]
         [ p_
-            [ onMouseOver $ ElementHovered Nothing
-            , onMouseOut $ ElementHovered Nothing
+            [ onMouseOver $ AbilityHovered ability
+            , onMouseOut NothingHovered
             , onClick $
               case battleWinner m of
                 Just _ -> Restart
@@ -170,7 +169,7 @@ buildAbilityButton ability index m =
             ]
         ]
 
-buildInfoBoxContents :: BuffDescription -> [View Action]
+buildInfoBoxContents :: GameDescription -> [View Action]
 buildInfoBoxContents desc =
   [b_ [] [text $ ms $ descTitle desc], p_ [] [text $ ms $ descText desc]]
 

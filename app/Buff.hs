@@ -2,6 +2,8 @@
 
 module Buff where
 
+import SharedModel
+
 data Buff =
   Buff
     { buffType :: BuffType
@@ -12,42 +14,39 @@ data Buff =
 data BuffType
   = PoisonOfTheHeavyBlade
   | PeaceOfTheLightBlade
-  deriving (Show, Eq)
+  deriving (Eq)
 
-data BuffDescription =
-  BuffDescription
-    { descTitle :: String
-    , descText :: String
-    }
+instance Show BuffType where
+  show PoisonOfTheHeavyBlade = "Poison of the Heavy Blade"
+  show PeaceOfTheLightBlade = "Peace of the Light Blade"
 
 numbers :: BuffType -> [Integer]
 numbers PoisonOfTheHeavyBlade = [100]
 numbers PeaceOfTheLightBlade = [50]
 
-description :: Buff -> BuffDescription
+description :: Buff -> GameDescription
 description buff =
   case buffType buff of
     PoisonOfTheHeavyBlade ->
-      BuffDescription
-        { descTitle = "Poison of the Heavy Blade"
+      GameDescription
+        { descTitle = show PoisonOfTheHeavyBlade
         , descText =
             "This hero is poisoned and takes " ++
             show (head $ numbers PoisonOfTheHeavyBlade) ++
-            " damage every turn for " ++
-            show (buffDuration buff) ++
-            if buffDuration buff == 1
-              then " turn"
-              else " turns"
+            " damage every turn for " ++ turns (buffDuration buff)
         }
     PeaceOfTheLightBlade ->
-      BuffDescription
-        { descTitle = "Peace of the Light Blade"
+      GameDescription
+        { descTitle = show PeaceOfTheLightBlade
         , descText =
             "This hero is pacified and loses " ++
             show (head $ numbers PeaceOfTheLightBlade) ++
-            " focus every turn for " ++
-            show (buffDuration buff) ++
-            if buffDuration buff == 1
-              then " turn"
-              else " turns"
+            " focus every turn for " ++ turns (buffDuration buff)
         }
+
+turns :: Int -> String
+turns duration =
+  show duration ++
+  if duration == 1
+    then " turn"
+    else " turns"

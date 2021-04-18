@@ -1,1 +1,1 @@
-./node_modules/.bin/sass --watch assets/sass:assets/css
+node_modules/.bin/sass --watch assets/sass:assets/css

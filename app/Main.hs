@@ -35,8 +35,8 @@ runApp f =
         ("assets":_) -> staticApp (defaultWebAppSettings ".") req sendResp
         _ -> JSaddle.jsaddleApp req sendResp
 #else
-  runApp :: IO () -> IO ()
-  runApp app = app
+runApp :: IO () -> IO ()
+runApp app = app
 #endif
 -- miso entrypoint
 main :: IO ()

@@ -3,31 +3,31 @@ module AbilityImpl
   ) where
 
 import Ability
-import Buff
-import Hero
+import Buff hiding (numbers)
 import BuffImpl
+import Hero
 
 import Data.Function
 
 cast :: Ability -> HeroID -> HeroID -> [Hero] -> [Hero]
 cast Slash caster target heroes =
-  let damage = 150
+  let damage = head $ numbers Slash
       fCost = focusCost Slash
       buffs = [Buff {buffType = PeaceOfTheLightBlade, buffDuration = 2}]
    in defaultCast damage fCost buffs caster target heroes
 cast Hack caster target heroes =
-  let damage = 350
+  let damage = head $ numbers Hack
       fCost = focusCost Hack
       buffs = [Buff {buffType = PoisonOfTheHeavyBlade, buffDuration = 3}]
    in defaultCast damage fCost buffs caster target heroes
-cast Destroy caster target heroes =
-  let damage = 10000
-      fCost = focusCost Destroy
+cast Wound caster target heroes =
+  let damage = head $ numbers Wound
+      fCost = focusCost Wound
       buffs = []
    in defaultCast damage fCost buffs caster target heroes
-cast Wound caster target heroes =
-  let damage = 100
-      fCost = focusCost Wound
+cast Destroy caster target heroes =
+  let damage = head $ numbers Destroy
+      fCost = focusCost Destroy
       buffs = []
    in defaultCast damage fCost buffs caster target heroes
 

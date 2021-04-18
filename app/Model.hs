@@ -1,3 +1,4 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
 
 module Model where
@@ -5,13 +6,14 @@ module Model where
 import Ability
 import Buff
 import Hero
+import SharedModel
 
 data Model =
   Model
     { heroesInBattle :: [Hero]
     , battleWinner :: Maybe BattleSide
     , humanActive :: Bool
-    , hoveredElement :: Maybe Buff
+    , infoBoxContents :: GameDescription
     }
   deriving (Show, Eq)
 
@@ -20,7 +22,9 @@ data Action
   | Print String
   | AbilityBtnPressed Int
   | AttackAnimationEnd HeroID
-  | ElementHovered (Maybe Buff)
+  | BuffHovered Buff
+  | AbilityHovered Ability
+  | NothingHovered
   | Restart
   deriving (Show, Eq)
 
@@ -55,7 +59,7 @@ initialModel =
         ]
     , battleWinner = Nothing
     , humanActive = True
-    , hoveredElement = Nothing
+    , infoBoxContents = GameDescription {descTitle = "", descText = ""}
     }
 
 newtype GuiEvent =

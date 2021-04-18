@@ -1,1 +1,1 @@
-nix-build && rsync -avz ./result/bin/sonny76-exe.jsexe/ root@1911.to:/var/www/sonny76/
+git pull && nix-build && node_modules/.bin/sass assets/sass:assets/css && rsync -avz result/bin/sonny76.jsexe/ /var/www/sonny76/
