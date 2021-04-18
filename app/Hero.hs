@@ -103,14 +103,6 @@ findHero hID heroes =
     Nothing ->
       error $ "i tried to find a hero by id " ++ show hID ++ " and failed"
 
-applyBuffs :: [Buff] -> HeroID -> [Hero] -> [Hero]
-applyBuffs buffs hID heroes =
-  let hero = findHero hID heroes
-   in addBuffs buffs hero & updateHero heroes
-
-addBuffs :: [Buff] -> Hero -> Hero
-addBuffs buffs hero = hero {activeBuffs = (hero & activeBuffs) ++ buffs}
-
 applyStatusEffect :: StatusEffect -> HeroID -> [Hero] -> [Hero]
 applyStatusEffect effect hID heroes =
   let hero = findHero hID heroes

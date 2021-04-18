@@ -2,7 +2,14 @@
 
 module Buff where
 
-data Buff
+data Buff =
+  Buff
+    { buffType :: BuffType
+    , buffDuration :: Int
+    }
+  deriving (Show, Eq)
+
+data BuffType
   = PoisonOfTheHeavyBlade
   | PeaceOfTheLightBlade
   deriving (Show, Eq)
@@ -13,14 +20,34 @@ data BuffDescription =
     , descText :: String
     }
 
+numbers :: BuffType -> [Integer]
+numbers PoisonOfTheHeavyBlade = [100]
+numbers PeaceOfTheLightBlade = [50]
+
 description :: Buff -> BuffDescription
-description PoisonOfTheHeavyBlade =
-  BuffDescription
-    { descTitle = "Poison of the Heavy Blade"
-    , descText = "This hero is poisoned and takes 100 damage every turn"
-    }
-description PeaceOfTheLightBlade =
-  BuffDescription
-    { descTitle = "Peace of the Light Blade"
-    , descText = "This hero is pacified and loses 100 focus every turn"
-    }
+description buff =
+  case buffType buff of
+    PoisonOfTheHeavyBlade ->
+      BuffDescription
+        { descTitle = "Poison of the Heavy Blade"
+        , descText =
+            "This hero is poisoned and takes " ++
+            show (head $ numbers PoisonOfTheHeavyBlade) ++
+            " damage every turn for " ++
+            show (buffDuration buff) ++
+            if buffDuration buff == 1
+              then " turn"
+              else " turns"
+        }
+    PeaceOfTheLightBlade ->
+      BuffDescription
+        { descTitle = "Peace of the Light Blade"
+        , descText =
+            "This hero is pacified and loses " ++
+            show (head $ numbers PeaceOfTheLightBlade) ++
+            " focus every turn for " ++
+            show (buffDuration buff) ++
+            if buffDuration buff == 1
+              then " turn"
+              else " turns"
+        }

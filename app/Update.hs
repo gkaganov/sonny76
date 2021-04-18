@@ -37,7 +37,7 @@ humanTurn abilityNum m =
       enemy = findHeroID RightSide heroes
    in if dead hero
         then m
-        else let heroes' = triggerAllBuffs hID heroes
+        else let heroes' = triggerAllBuffs hID heroes & tickBuffDuration hID
                  hero' = findHero hID heroes'
               in if dead hero'
                    then m {heroesInBattle = heroes'}
@@ -56,7 +56,7 @@ aiTurn m =
       enemy = findHeroID LeftSide heroes
    in if dead hero
         then m
-        else let heroes' = triggerAllBuffs hID heroes
+        else let heroes' = triggerAllBuffs hID heroes & tickBuffDuration hID
                  ability =
                    aiChooseAbility hID (hero & availableAbilities) heroes'
                  hero' = findHero hID heroes'

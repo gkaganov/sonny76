@@ -24,6 +24,8 @@ executable sonny76
   other-modules:
       Ability
       AbilityImpl
+      Buff
+      BuffImpl
       Hero
       Model
       Update
